@@ -3,12 +3,14 @@ import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { DashboardService } from "@/services/dashboard.service";
 import { BudgetService } from "@/services/budget.service";
+import { GoalService } from "@/services/goal.service";
 import { AppHeader } from "@/components/navigation/app-header";
 import { formatCurrency } from "@/lib/utils";
 import { IncomeExpenseChart } from "@/components/dashboard/income-expense-chart";
 import { ExpenseCategoryChart } from "@/components/dashboard/expense-category-chart";
 import { DailyExpenseChart } from "@/components/dashboard/daily-expense-chart";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
+import { GoalsOverview } from "@/components/dashboard/goals-overview";
 
 // ─── Account type icon ────────────────────────────────────────────────────────
 
@@ -70,16 +72,25 @@ export default async function DashboardPage() {
     ((user as Record<string, unknown>).timezone as string) || "Asia/Jakarta";
 
   // Fetch all dashboard data in parallel (server-side aggregation)
-  const [kpis, monthlyTrend, expenseByCategory, dailyTrend, accountBalances, recentTxns, budgetList] =
-    await Promise.all([
-      DashboardService.getKPIs(user.id, timezone),
-      DashboardService.getMonthlyTrend(user.id, timezone),
-      DashboardService.getExpenseByCategory(user.id, timezone),
-      DashboardService.getDailyExpenseTrend(user.id, timezone),
-      DashboardService.getAccountBalances(user.id),
-      DashboardService.getRecentTransactions(user.id, 8),
-      BudgetService.getBudgetSummary(user.id),
-    ]);
+  const [
+    kpis,
+    monthlyTrend,
+    expenseByCategory,
+    dailyTrend,
+    accountBalances,
+    recentTxns,
+    budgetList,
+    goalSummary,
+  ] = await Promise.all([
+    DashboardService.getKPIs(user.id, timezone),
+    DashboardService.getMonthlyTrend(user.id, timezone),
+    DashboardService.getExpenseByCategory(user.id, timezone),
+    DashboardService.getDailyExpenseTrend(user.id, timezone),
+    DashboardService.getAccountBalances(user.id),
+    DashboardService.getRecentTransactions(user.id, 8),
+    BudgetService.getBudgetSummary(user.id),
+    GoalService.getGoalSummary(user.id),
+  ]);
 
   const savingRateColor =
     kpis.savingRate >= 20
@@ -375,25 +386,49 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── Budget Overview ── */}
-        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-                Budget Bulan Ini
-              </h2>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Progres pengeluaran per kategori
-              </p>
+        {/* ── Budget & Financial Goals Overview ── */}
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Budget Overview */}
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  Budget Bulan Ini
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Progres pengeluaran per kategori
+                </p>
+              </div>
+              <Link
+                href="/budgets"
+                className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+              >
+                Kelola →
+              </Link>
             </div>
-            <Link
-              href="/budgets"
-              className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-            >
-              Kelola →
-            </Link>
+            <BudgetOverview budgets={budgetList} />
           </div>
-          <BudgetOverview budgets={budgetList} />
+
+          {/* Financial Goals Overview */}
+          <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  Target Keuangan
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  Progres pencapaian target tabungan
+                </p>
+              </div>
+              <Link
+                href="/goals"
+                className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+              >
+                Kelola →
+              </Link>
+            </div>
+            <GoalsOverview goals={goalSummary.activeGoals} />
+          </div>
         </div>
       </main>
     </div>

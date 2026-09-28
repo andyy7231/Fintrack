@@ -15,3 +15,6 @@ export * from "./whatsapp";
 
 // Phase 6: Budget Management schema
 export * from "./budget";
+
+// Phase 7: Financial Goals schema
+export * from "./goal";

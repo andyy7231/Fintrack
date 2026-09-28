@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { href: "/transactions", label: "Transaksi" },
   { href: "/accounts", label: "Akun" },
   { href: "/categories", label: "Kategori" },
+  { href: "/budgets", label: "Budget" },
+  { href: "/goals", label: "Goals" },
   { href: "/transfers", label: "Transfer" },
   { href: "/settings/profile", label: "Profil" },
 ];

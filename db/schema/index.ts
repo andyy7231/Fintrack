@@ -12,3 +12,6 @@ export * from "./finance";
 
 // Phase 4: WhatsApp Cloud API & Webhook schema
 export * from "./whatsapp";
+
+// Phase 6: Budget Management schema
+export * from "./budget";

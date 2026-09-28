@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { DashboardService } from "@/services/dashboard.service";
+import { BudgetService } from "@/services/budget.service";
 import { AppHeader } from "@/components/navigation/app-header";
 import { formatCurrency } from "@/lib/utils";
 import { IncomeExpenseChart } from "@/components/dashboard/income-expense-chart";
 import { ExpenseCategoryChart } from "@/components/dashboard/expense-category-chart";
 import { DailyExpenseChart } from "@/components/dashboard/daily-expense-chart";
+import { BudgetOverview } from "@/components/dashboard/budget-overview";
 
 // ─── Account type icon ────────────────────────────────────────────────────────
 
@@ -68,7 +70,7 @@ export default async function DashboardPage() {
     ((user as Record<string, unknown>).timezone as string) || "Asia/Jakarta";
 
   // Fetch all dashboard data in parallel (server-side aggregation)
-  const [kpis, monthlyTrend, expenseByCategory, dailyTrend, accountBalances, recentTxns] =
+  const [kpis, monthlyTrend, expenseByCategory, dailyTrend, accountBalances, recentTxns, budgetList] =
     await Promise.all([
       DashboardService.getKPIs(user.id, timezone),
       DashboardService.getMonthlyTrend(user.id, timezone),
@@ -76,6 +78,7 @@ export default async function DashboardPage() {
       DashboardService.getDailyExpenseTrend(user.id, timezone),
       DashboardService.getAccountBalances(user.id),
       DashboardService.getRecentTransactions(user.id, 8),
+      BudgetService.getBudgetSummary(user.id),
     ]);
 
   const savingRateColor =
@@ -370,6 +373,27 @@ export default async function DashboardPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Budget Overview ── */}
+        <div className="mt-6 rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                Budget Bulan Ini
+              </h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Progres pengeluaran per kategori
+              </p>
+            </div>
+            <Link
+              href="/budgets"
+              className="text-xs font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
+            >
+              Kelola →
+            </Link>
+          </div>
+          <BudgetOverview budgets={budgetList} />
         </div>
       </main>
     </div>

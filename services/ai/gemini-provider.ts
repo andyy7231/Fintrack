@@ -1,4 +1,4 @@
-﻿import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   ParsedFinancialBatch,
   ParsedFinancialIntent,
@@ -27,9 +27,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
     }
     
     this.genAI = new GoogleGenerativeAI(key);
-    // Use gemini-2.0-flash-exp for best performance/cost ratio
+    // Use gemini-1.5-flash (stable, free tier) for best performance/cost ratio
     this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-1.5-flash",
       generationConfig: {
         temperature: 0.1, // Low temperature for consistent financial parsing
         topP: 0.8,
@@ -115,9 +115,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
 
 **Important Rules:**
 1. **Amount Parsing:**
-   - "25rb", "25ribu", "25k" → 25000
-   - "2.5jt", "2,5juta", "2.5m" → 2500000
-   - "500", "500000" → exact number
+   - "25rb", "25ribu", "25k" ? 25000
+   - "2.5jt", "2,5juta", "2.5m" ? 2500000
+   - "500", "500000" ? exact number
 
 2. **Category Matching:**
    - Match to user's existing categories when possible
@@ -125,16 +125,16 @@ export class GeminiAIProvider implements FinancialParserProvider {
    - For budget/expense, use EXPENSE categories only
 
 3. **Natural Language:**
-   - Handle typos: "makn" → "makan", "transpot" → "transport"
-   - Handle conversational: "tadi beli kopi 25k" → EXPENSE
-   - Handle shorthand: "makan 50k" → EXPENSE for Makanan & Minuman
+   - Handle typos: "makn" ? "makan", "transpot" ? "transport"
+   - Handle conversational: "tadi beli kopi 25k" ? EXPENSE
+   - Handle shorthand: "makan 50k" ? EXPENSE for Makanan & Minuman
 
 4. **Multi-action Support:**
-   - "Gaji 5jt untuk makan 2jt transport 1jt" → [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
+   - "Gaji 5jt untuk makan 2jt transport 1jt" ? [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
 
 5. **Balance Query:**
-   - "saldo", "uang saya", "cek saldo" → BALANCE_QUERY
-   - "uang free", "free cash" → BALANCE_QUERY (will show free cash)
+   - "saldo", "uang saya", "cek saldo" ? BALANCE_QUERY
+   - "uang free", "free cash" ? BALANCE_QUERY (will show free cash)
 
 6. **Unknown Handling:**
    - If unclear, return UNKNOWN with clarificationQuestion

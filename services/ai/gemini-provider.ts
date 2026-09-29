@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+﻿import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   ParsedFinancialBatch,
   ParsedFinancialIntent,
@@ -29,7 +29,7 @@ export class GeminiAIProvider implements FinancialParserProvider {
     this.genAI = new GoogleGenerativeAI(key);
     // Use gemini-1.5-flash (stable, free tier) for best performance/cost ratio
     this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-1.5-flash-latest",
       generationConfig: {
         temperature: 0.1, // Low temperature for consistent financial parsing
         topP: 0.8,

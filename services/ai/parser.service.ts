@@ -1,4 +1,4 @@
-import { FinancialParserProvider, MockAIProvider, GeminiAIProvider } from "./provider";
+﻿import { FinancialParserProvider, MockAIProvider, GeminiAIProvider } from "./provider";
 import { ParsedFinancialIntent } from "./schemas";
 import { getJakartaDateString, parseIndonesianDate } from "./date.utils";
 import { formatRupiah } from "./amount.utils";
@@ -117,7 +117,7 @@ export class FinancialParserService {
       // ── 2. Check if the entire batch is a BALANCE_QUERY ─────────────────────
       if (rawIntents.length === 1 && rawIntents[0]?.intent === "BALANCE_QUERY") {
         const bq = rawIntents[0];
-        return await this._handleBalanceQuery(userId, bq.accountHint ?? null);
+        return await this._handleBalanceQuery(userId, text, bq.accountHint ?? null);
       }
 
       // ── 3. Resolve mutation actions ──────────────────────────────────────────
@@ -188,11 +188,14 @@ export class FinancialParserService {
 
   /**
    * BALANCE_QUERY handler — read-only, uses AccountService.getAccountsWithBalances.
+   * Detects if user is asking for "free cash" (unallocated) vs total balance.
    */
   private async _handleBalanceQuery(
     userId: string,
+    originalText: string,
     accountHint: string | null
   ): Promise<ParseWorkflowResult> {
+    const { isFreeCashQuery } = await import("@/services/ai/provider");
     const accountsWithBalances = await AccountService.getAccountsWithBalances(userId);
     const activeAccounts = accountsWithBalances.filter((a) => a.isActive);
 
@@ -203,28 +206,49 @@ export class FinancialParserService {
       };
     }
 
+    // Determine if user is asking for free cash vs total balance
+    const askingForFreeCash = isFreeCashQuery(originalText);
+
     // Account-specific query
     if (accountHint) {
       const search = accountHint.toLowerCase().trim();
       const match = activeAccounts.find((a) => a.name.toLowerCase().includes(search));
       if (match) {
+        const amount = askingForFreeCash ? (match.freeCash ?? match.currentBalance) : match.currentBalance;
+        const label = askingForFreeCash ? "Uang Free (tersedia)" : "Saldo";
         return {
           status: "BALANCE_QUERY",
           responseText:
-            `💰 Saldo ${match.name} Anda saat ini: *${formatRupiah(match.currentBalance)}*`,
+            `💰 ${label} ${match.name} Anda saat ini: *${formatRupiah(amount)}*`,
         };
       }
     }
 
-    // Total balance across all active accounts
-    const total = activeAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
-    const lines = activeAccounts.map((a) => `• ${a.name}: ${formatRupiah(a.currentBalance)}`).join("\n");
+    // Total balance or free cash across all active accounts
+    if (askingForFreeCash) {
+      const totalFree = activeAccounts.reduce((sum, a) => sum + (a.freeCash ?? a.currentBalance), 0);
+      const lines = activeAccounts.map((a) => 
+        `• ${a.name}: ${formatRupiah(a.freeCash ?? a.currentBalance)}`
+      ).join("\n");
 
-    return {
-      status: "BALANCE_QUERY",
-      responseText:
-        `💰 Sisa uang Anda saat ini: *${formatRupiah(total)}*\n\nRincian:\n${lines}`,
-    };
+      return {
+        status: "BALANCE_QUERY",
+        responseText:
+          `💵 Uang Free Anda saat ini: *${formatRupiah(totalFree)}*\n` +
+          `(Uang yang bisa dipakai setelah dikurangi alokasi budget)\n\n` +
+          `Rincian:\n${lines}`,
+      };
+    } else {
+      // Total balance (including budget allocations)
+      const total = activeAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
+      const lines = activeAccounts.map((a) => `• ${a.name}: ${formatRupiah(a.currentBalance)}`).join("\n");
+
+      return {
+        status: "BALANCE_QUERY",
+        responseText:
+          `💰 Sisa uang Anda saat ini: *${formatRupiah(total)}*\n\nRincian:\n${lines}`,
+      };
+    }
   }
 
   /**

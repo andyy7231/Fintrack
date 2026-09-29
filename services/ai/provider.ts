@@ -1,4 +1,4 @@
-import {
+﻿import {
   ParsedFinancialBatch,
   ParsedFinancialIntent,
   financialBatchSchema,
@@ -109,7 +109,11 @@ export function isBalanceQuery(text: string): boolean {
     lower.includes("punya duit") ||
     lower.includes("berapa uang") ||
     lower.includes("uang sekarang") ||
-    lower.includes("uang ada berapa");
+    lower.includes("uang ada berapa") ||
+    lower.includes("uang free") ||
+    lower.includes("free cash") ||
+    lower.includes("uang bebas") ||
+    lower.includes("kas free");
 
   if (hasSaldoWord || hasUangQuery) {
     if (
@@ -123,6 +127,24 @@ export function isBalanceQuery(text: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * Determine if user is asking for free cash (unallocated money) vs total balance
+ */
+export function isFreeCashQuery(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+  return (
+    lower.includes("uang free") ||
+    lower.includes("free cash") ||
+    lower.includes("uang bebas") ||
+    lower.includes("kas free") ||
+    lower.includes("uang tersedia") ||
+    lower.includes("uang bisa dipakai") ||
+    lower.includes("uang yang bisa") ||
+    (lower.includes("sisa") && lower.includes("free")) ||
+    (lower.includes("berapa") && lower.includes("free"))
+  );
 }
 
 // ─────────────────────────────────────────────────────────────

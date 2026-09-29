@@ -222,45 +222,74 @@ export class AccountService {
     userId: string,
     accountId: string
   ): Promise<number> {
-    // 1. Get total account balance
-    const [account] = await db
-      .select({ initialBalance: accounts.initialBalance })
-      .from(accounts)
-      .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
-      .limit(1);
-    
-    if (!account) {
-      throw new Error("Account not found");
-    }
-    
-    const totalBalance = await this.getAccountBalance(
-      userId,
-      accountId,
-      parseFloat(account.initialBalance)
-    );
-    
-    // 2. Sum active budget allocations for this account
-    // Active = budget period includes current time (startDate <= now < endDate)
-    const now = new Date();
-    const [allocationsRes] = await db
-      .select({
-        total: sql<string>`coalesce(sum(${budgets.amount}), '0.00')`,
-      })
-      .from(budgets)
-      .where(
-        and(
-          eq(budgets.userId, userId),
-          eq(budgets.accountId, accountId),
-          lte(budgets.startDate, now),  // Budget has started
-          gte(budgets.endDate, now)     // Budget hasn't ended
-        )
+    try {
+      // 1. Get total account balance
+      const [account] = await db
+        .select({ initialBalance: accounts.initialBalance })
+        .from(accounts)
+        .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+        .limit(1);
+      
+      if (!account) {
+        throw new Error("Account not found");
+      }
+      
+      const totalBalance = await this.getAccountBalance(
+        userId,
+        accountId,
+        parseFloat(account.initialBalance)
       );
-    
-    const totalAllocated = parseFloat(allocationsRes?.total || "0");
-    
-    // 3. Free cash = total balance - allocations
-    const freeCash = totalBalance - totalAllocated;
-    
-    return Math.round(freeCash * 100) / 100;
+      
+      // 2. Sum active budget allocations for this account
+      // Active = budget period includes current time (startDate <= now < endDate)
+      const now = new Date();
+      const [allocationsRes] = await db
+        .select({
+          total: sql<string>`coalesce(sum(${budgets.amount}), '0.00')`,
+        })
+        .from(budgets)
+        .where(
+          and(
+            eq(budgets.userId, userId),
+            eq(budgets.accountId, accountId),
+            lte(budgets.startDate, now),  // Budget has started
+            gte(budgets.endDate, now)     // Budget hasn't ended
+          )
+        );
+      
+      const totalAllocated = parseFloat(allocationsRes?.total || "0");
+      
+      // 3. Free cash = total balance - allocations
+      const freeCash = totalBalance - totalAllocated;
+      
+      return Math.round(freeCash * 100) / 100;
+    } catch (error: any) {
+      // HOTFIX: If account_id column doesn't exist in production (migration not run),
+      // fallback to returning total balance as free cash
+      if (error?.message && (error.message.includes('column') || error.message.includes('does not exist'))) {
+        console.warn('[HOTFIX] account_id column might be missing in budgets table, falling back to total balance');
+        
+        const [account] = await db
+          .select({ initialBalance: accounts.initialBalance })
+          .from(accounts)
+          .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+          .limit(1);
+        
+        if (!account) {
+          throw new Error("Account not found");
+        }
+        
+        const totalBalance = await this.getAccountBalance(
+          userId,
+          accountId,
+          parseFloat(account.initialBalance)
+        );
+        
+        return Math.round(totalBalance * 100) / 100;
+      }
+      
+      // Re-throw other errors
+      throw error;
+    }
   }
 }

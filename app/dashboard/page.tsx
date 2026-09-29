@@ -73,24 +73,36 @@ export default async function DashboardPage() {
 
   // Fetch all dashboard data in parallel (server-side aggregation)
   const [
-    kpis,
+    summary,
     monthlyTrend,
     expenseByCategory,
     dailyTrend,
     accountBalances,
-    recentTxns,
     budgetList,
     goalSummary,
   ] = await Promise.all([
-    DashboardService.getKPIs(user.id, timezone),
+    DashboardService.getSummary(user.id, timezone),
     DashboardService.getMonthlyTrend(user.id, timezone),
     DashboardService.getExpenseByCategory(user.id, timezone),
     DashboardService.getDailyExpenseTrend(user.id, timezone),
     DashboardService.getAccountBalances(user.id),
-    DashboardService.getRecentTransactions(user.id, 8),
     BudgetService.getBudgetSummary(user.id),
     GoalService.getGoalSummary(user.id),
   ]);
+
+  // Extract KPIs from summary
+  const kpis = {
+    totalNetWorth: summary.totalBalance,
+    incomeThisMonth: summary.incomeThisMonth,
+    expenseThisMonth: summary.expenseThisMonth,
+    netSavings: summary.netThisMonth,
+    savingRate: summary.incomeThisMonth > 0 
+      ? (summary.netThisMonth / summary.incomeThisMonth) * 100 
+      : 0,
+    activeAccountsCount: summary.activeAccountsCount,
+  };
+
+  const recentTxns = summary.recentTransactions;
 
   const savingRateColor =
     kpis.savingRate >= 20
@@ -152,12 +164,22 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 5 KPI Cards ── */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {/* ── 5 KPI Cards + Free Cash ── */}
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <KpiCard
-            label="Total Kekayaan Bersih"
-            value={formatCurrency(kpis.totalNetWorth)}
-            sub={`${kpis.activeAccountsCount} akun aktif`}
+            label="Uang Keseluruhan"
+            value={formatCurrency(summary.totalBalance)}
+            sub="Total termasuk alokasi budget"
+          />
+          <KpiCard
+            label="Uang Free"
+            value={formatCurrency(summary.freeCash)}
+            sub="Saldo yang tersedia untuk dibelanjakan"
+            colorClass={
+              summary.freeCash < summary.totalBalance * 0.1
+                ? "text-red-600 dark:text-red-400"
+                : "text-blue-600 dark:text-blue-400"
+            }
           />
           <KpiCard
             label="Pemasukan Bulan Ini"

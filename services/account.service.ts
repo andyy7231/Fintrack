@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
-import { accounts, transactions, transfers } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { accounts, transactions, transfers, budgets } from "@/db/schema";
+import { eq, and, sql, lte, gte } from "drizzle-orm";
 import { CreateAccountInput, UpdateAccountInput } from "@/schemas/account.schema";
 
 export interface AccountWithBalance {
@@ -14,6 +14,8 @@ export interface AccountWithBalance {
   createdAt: Date;
   updatedAt: Date;
   currentBalance: number;
+  totalBalance?: number;
+  freeCash?: number;
 }
 
 export class AccountService {
@@ -65,9 +67,12 @@ export class AccountService {
 
     for (const acc of userAccounts) {
       const balance = await this.getAccountBalance(userId, acc.id, parseFloat(acc.initialBalance));
+      const freeCash = await this.getFreeCash(userId, acc.id);
       results.push({
         ...acc,
         currentBalance: balance,
+        totalBalance: balance,
+        freeCash,
       });
     }
 
@@ -92,9 +97,13 @@ export class AccountService {
       parseFloat(account.initialBalance)
     );
 
+    const freeCash = await this.getFreeCash(userId, account.id);
+
     return {
       ...account,
       currentBalance,
+      totalBalance: currentBalance,
+      freeCash,
     };
   }
 
@@ -200,5 +209,58 @@ export class AccountService {
       totalTransfersOut;
 
     return Math.round(balance * 100) / 100;
+  }
+
+  /**
+   * Calculate free cash (unallocated money) for an account
+   * Free Cash = Account Balance - Sum of Active Budget Allocations
+   * 
+   * This represents the money available for non-budgeted spending.
+   * Budget allocations are considered "reserved" funds.
+   */
+  static async getFreeCash(
+    userId: string,
+    accountId: string
+  ): Promise<number> {
+    // 1. Get total account balance
+    const [account] = await db
+      .select({ initialBalance: accounts.initialBalance })
+      .from(accounts)
+      .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
+      .limit(1);
+    
+    if (!account) {
+      throw new Error("Account not found");
+    }
+    
+    const totalBalance = await this.getAccountBalance(
+      userId,
+      accountId,
+      parseFloat(account.initialBalance)
+    );
+    
+    // 2. Sum active budget allocations for this account
+    // Active = budget period includes current time (startDate <= now < endDate)
+    const now = new Date();
+    const [allocationsRes] = await db
+      .select({
+        total: sql<string>`coalesce(sum(${budgets.amount}), '0.00')`,
+      })
+      .from(budgets)
+      .where(
+        and(
+          eq(budgets.userId, userId),
+          eq(budgets.accountId, accountId),
+          lte(budgets.startDate, now),  // Budget has started
+          gte(budgets.endDate, now)     // Budget hasn't ended
+        )
+      );
+    
+    const totalAllocated = parseFloat(allocationsRes?.total || "0");
+    
+    // 3. Free cash = total balance - allocations
+    const freeCash = totalBalance - totalAllocated;
+    
+    return Math.round(freeCash * 100) / 100;
   }
 }

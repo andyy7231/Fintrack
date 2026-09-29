@@ -237,12 +237,24 @@ export class BudgetService {
 
   static async createBudget(
     userId: string,
+    accountId: string,
     input: CreateBudgetInput
   ): Promise<BudgetProgressDTO> {
     // 1. Validate & resolve category (EXPENSE only, ownership enforced)
     await resolveExpenseCategory(userId, input.categoryId);
 
-    // 2. Compute UTC period boundaries
+    // 2. Validate sufficient free cash
+    const { AccountService } = await import("./account.service");
+    const freeCash = await AccountService.getFreeCash(userId, accountId);
+    const allocationAmount = parseFloat(input.amount);
+    
+    if (allocationAmount > freeCash) {
+      throw new Error(
+        `Saldo free cash tidak mencukupi. Tersedia: ${freeCash.toLocaleString()}, Dibutuhkan: ${allocationAmount.toLocaleString()}`
+      );
+    }
+
+    // 3. Compute UTC period boundaries
     let startUtc: Date;
     let endUtc: Date;
 
@@ -255,7 +267,7 @@ export class BudgetService {
       endUtc = jakartaDateStringToExclusiveUtcEnd(input.endDate);
     }
 
-    // 3. Check for overlapping budget (duplicate/ambiguity prevention)
+    // 4. Check for overlapping budget (duplicate/ambiguity prevention)
     const overlaps = await hasOverlappingBudget(
       userId,
       input.categoryId,
@@ -268,11 +280,12 @@ export class BudgetService {
       );
     }
 
-    // 4. Insert
+    // 5. Insert with accountId
     const [created] = await db
       .insert(budgets)
       .values({
         userId,
+        accountId,
         categoryId: input.categoryId,
         periodType: input.periodType,
         startDate: startUtc,

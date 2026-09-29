@@ -5,7 +5,8 @@ import { eq, and, sql, gte, lte, desc, isNull, or } from "drizzle-orm";
 // ─── DTO types ────────────────────────────────────────────────────────────────
 
 export interface DashboardSummary {
-  totalBalance: number;
+  totalBalance: number; // Uang Keseluruhan (total including allocations)
+  freeCash: number; // Uang Free (unallocated cash)
   incomeThisMonth: number;
   expenseThisMonth: number;
   netThisMonth: number;
@@ -223,8 +224,18 @@ export class DashboardService {
       .orderBy(desc(transactions.transactionDate), desc(transactions.createdAt))
       .limit(5);
 
+    // 6. Calculate free cash across all active accounts
+    const { AccountService } = await import("./account.service");
+    let totalFreeCash = 0;
+    for (const acc of activeAccounts) {
+      const freeCash = await AccountService.getFreeCash(userId, acc.id);
+      totalFreeCash += freeCash;
+    }
+    totalFreeCash = Math.round(totalFreeCash * 100) / 100;
+
     return {
       totalBalance: Math.round(totalBalance * 100) / 100,
+      freeCash: totalFreeCash,
       incomeThisMonth: Math.round(incomeThisMonth * 100) / 100,
       expenseThisMonth: Math.round(expenseThisMonth * 100) / 100,
       netThisMonth: Math.round(netThisMonth * 100) / 100,

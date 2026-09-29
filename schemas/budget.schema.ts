@@ -14,6 +14,7 @@ export type PeriodType = z.infer<typeof periodTypeSchema>;
  */
 export const createMonthlyBudgetSchema = z.object({
   periodType: z.literal("MONTHLY"),
+  accountId: z.string().min(1, "accountId diperlukan"),
   categoryId: z.string().min(1, "categoryId diperlukan"),
   /** Budget limit amount — must be positive */
   amount: z
@@ -38,6 +39,7 @@ export const createMonthlyBudgetSchema = z.object({
 export const createCustomBudgetSchema = z
   .object({
     periodType: z.literal("CUSTOM"),
+    accountId: z.string().min(1, "accountId diperlukan"),
     categoryId: z.string().min(1, "categoryId diperlukan"),
     amount: z
       .string()
@@ -74,6 +76,7 @@ export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
  */
 export const updateBudgetSchema = z
   .object({
+    accountId: z.string().min(1).optional(),
     categoryId: z.string().min(1).optional(),
     amount: z
       .string()

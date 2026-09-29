@@ -175,7 +175,20 @@ export class SalaryAllocationService {
             });
           } else {
             // Create new monthly budget
-            await BudgetService.createBudget(userId, {
+            // Get user's first active account
+            const { AccountService } = await import("../account.service");
+            const userAccounts = await AccountService.getAccounts(userId);
+            
+            if (userAccounts.length === 0) {
+              throw new Error("Anda belum memiliki akun. Silakan buat akun terlebih dahulu.");
+            }
+            
+            const defaultAccount = userAccounts.find(a => a.isActive) || userAccounts[0];
+            if (!defaultAccount) {
+              throw new Error("Tidak ada akun aktif yang tersedia.");
+            }
+
+            await BudgetService.createBudget(userId, defaultAccount.id, {
               periodType: "MONTHLY",
               categoryId: matchedCat.id,
               amount: String(alloc.calculatedAmount),

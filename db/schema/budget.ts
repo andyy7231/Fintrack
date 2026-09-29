@@ -7,7 +7,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
-import { categories } from "./finance";
+import { categories, accounts } from "./finance";
 
 /**
  * Budgets Table (Phase 6)
@@ -36,6 +36,9 @@ export const budgets = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+
+    accountId: text("account_id")
+      .references(() => accounts.id, { onDelete: "restrict" }),
 
     categoryId: text("category_id")
       .notNull()
@@ -71,12 +74,19 @@ export const budgets = pgTable(
   },
   (table) => [
     index("budgets_userId_idx").on(table.userId),
+    index("budgets_accountId_idx").on(table.accountId),
     index("budgets_categoryId_idx").on(table.categoryId),
     index("budgets_startDate_idx").on(table.startDate),
     index("budgets_endDate_idx").on(table.endDate),
     index("budgets_userId_category_period_idx").on(
       table.userId,
       table.categoryId,
+      table.startDate,
+      table.endDate
+    ),
+    index("budgets_userId_accountId_dates_idx").on(
+      table.userId,
+      table.accountId,
       table.startDate,
       table.endDate
     ),
@@ -89,6 +99,10 @@ export const budgetsRelations = relations(budgets, ({ one }) => ({
   user: one(user, {
     fields: [budgets.userId],
     references: [user.id],
+  }),
+  account: one(accounts, {
+    fields: [budgets.accountId],
+    references: [accounts.id],
   }),
   category: one(categories, {
     fields: [budgets.categoryId],

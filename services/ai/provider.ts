@@ -131,8 +131,25 @@ export function isBalanceQuery(text: string): boolean {
 
 const BUDGET_ALLOC_KEYWORDS = ["budget ", "anggaran ", "alokasi ", "jatah "];
 
+// Detects budget allocation keywords anywhere in the text (inline or at start)
+// Keywords have trailing space to avoid false positives (e.g., "prebudget" won't match "budget ")
+// Additional check: must not have expense verbs like "beli", "bayar", "biaya" before the keyword
 export function isBudgetAllocationLine(lower: string): boolean {
-  return BUDGET_ALLOC_KEYWORDS.some((kw) => lower.startsWith(kw));
+  // Check if any budget keyword exists
+  const hasBudgetKeyword = BUDGET_ALLOC_KEYWORDS.some((kw) => lower.includes(kw));
+  if (!hasBudgetKeyword) return false;
+  
+  // Check if expense verbs appear before budget keyword
+  // If so, this is likely an expense where "budget" is part of the item description
+  const expenseVerbs = ["beli ", "bayar ", "biaya ", "buat ", "pesan "];
+  for (const verb of expenseVerbs) {
+    if (lower.startsWith(verb)) {
+      // Expense verb at start - likely "beli budget plan book 50k"
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -201,12 +218,23 @@ export class MockAIProvider implements FinancialParserProvider {
       if (!amount) {
         return { intent: "UNKNOWN", reason: "MISSING_AMOUNT", clarificationQuestion: "Berapa nominal budgetnya?" };
       }
-      // Extract category name after the budget keyword
-      const categoryName = lower
-        .replace(/^(?:budget|anggaran|alokasi|jatah)\s+/i, "")
+      
+      // Extract category name after the budget keyword (handles keywords at any position)
+      let textWithoutKeyword = lower;
+      for (const kw of ["budget ", "anggaran ", "alokasi ", "jatah "]) {
+        if (textWithoutKeyword.includes(kw)) {
+          // Split on the keyword and take the part after it
+          const parts = textWithoutKeyword.split(kw);
+          textWithoutKeyword = parts[parts.length - 1] || "";
+          break;
+        }
+      }
+      
+      const categoryName = textWithoutKeyword
         .replace(/[0-9]+(?:[.,][0-9]+)?\s*(?:ribu|rb|k|juta|jt)?/gi, "")
         .replace(/\s+/g, " ")
         .trim() || "Lainnya";
+      
       return { intent: "BUDGET_ALLOCATION", amount, categoryName };
     }
 

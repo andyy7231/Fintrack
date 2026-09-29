@@ -1,12 +1,9 @@
-import { db } from "@/lib/db";
 import { parseIndonesianAmount } from "@/services/ai/amount.utils";
 import { AccountService } from "@/services/account.service";
 import { CategoryService } from "@/services/category.service";
 import { TransactionService } from "@/services/transaction.service";
 import { BudgetService } from "@/services/budget.service";
 import { GoalService } from "@/services/goal.service";
-import { budgets } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID").format(Math.round(amount));
@@ -29,6 +26,20 @@ export class SalaryAllocationService {
    */
   static isSalaryAllocation(rawText: string): boolean {
     const text = rawText.toLowerCase().trim();
+
+    // Multi-line messages or messages containing explicit items ("budget", "bayar", "biaya", "kurangan", "paylater")
+    // must go through the FinancialParserService batch parser, NOT this single-shot service!
+    if (text.includes("\n")) return false;
+    if (
+      text.includes("budget ") ||
+      text.includes("bayar ") ||
+      text.includes("biaya ") ||
+      text.includes("beli ") ||
+      text.includes("tagihan ") ||
+      text.includes("kurangan ")
+    ) {
+      return false;
+    }
 
     const hasIncomeWord =
       text.includes("gaji") ||

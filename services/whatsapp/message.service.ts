@@ -227,6 +227,8 @@ export class WhatsAppMessageService {
                 );
 
                 outboundReply = parseResult.confirmationPrompt;
+              } else if (parseResult.status === "BALANCE_QUERY") {
+                outboundReply = parseResult.responseText;
               } else if (parseResult.status === "NEEDS_CLARIFICATION") {
                 outboundReply = parseResult.clarificationText;
               } else {

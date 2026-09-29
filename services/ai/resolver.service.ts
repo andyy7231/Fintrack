@@ -105,12 +105,62 @@ export class IntentResolverService {
     const compatible = allCategories.filter((c) => c.type === type);
 
     const search = categoryHint.toLowerCase().trim();
-    const matches = compatible.filter(
+    let matches = compatible.filter(
       (c) =>
         c.name.toLowerCase() === search ||
-        c.name.toLowerCase().includes(search)
+        c.name.toLowerCase().includes(search) ||
+        search.includes(c.name.toLowerCase())
     );
 
+    if (matches.length === 0) {
+      // Common Indonesian category synonyms / aliases
+      const synonyms: Record<string, string[]> = {
+        makan: ["makanan", "minuman", "kuliner", "food"],
+        transport: ["transportasi", "kendaraan", "bensin"],
+        kos: ["kost", "tempat tinggal", "sewa", "hunian", "kontrakan"],
+        tagihan: ["utilitas", "listrik", "air", "internet", "pulsa"],
+        belanja: ["shopping", "mall", "pasar"],
+        kesehatan: ["obat", "dokter", "medis"],
+        hiburan: ["entertainment", "game", "hobi"],
+        pendidikan: ["sekolah", "kuliah", "kursus", "edukasi"],
+      };
+
+      for (const [key, synList] of Object.entries(synonyms)) {
+        if (search === key || synList.includes(search) || search.includes(key)) {
+          matches = compatible.filter((c) => {
+            const cLower = c.name.toLowerCase();
+            return cLower.includes(key) || synList.some((s) => cLower.includes(s));
+          });
+          if (matches.length > 0) break;
+        }
+      }
+    }
+
+    // 1. Exact name match takes precedence
+    const exactMatches = matches.filter((c) => c.name.toLowerCase() === search);
+    if (exactMatches.length === 1 && exactMatches[0]) {
+      return {
+        status: "RESOLVED",
+        category: {
+          id: exactMatches[0].id,
+          name: exactMatches[0].name,
+          type: exactMatches[0].type,
+        },
+      };
+    }
+    if (exactMatches.length > 1) {
+      const userMatch = exactMatches.find((c) => c.userId === userId) || exactMatches[0]!;
+      return {
+        status: "RESOLVED",
+        category: {
+          id: userMatch.id,
+          name: userMatch.name,
+          type: userMatch.type,
+        },
+      };
+    }
+
+    // 2. Single match
     if (matches.length === 1 && matches[0]) {
       return {
         status: "RESOLVED",
@@ -122,7 +172,20 @@ export class IntentResolverService {
       };
     }
 
+    // 3. If multiple partial matches, check if exactly one belongs to user
     if (matches.length > 1) {
+      const userMatches = matches.filter((c) => c.userId === userId);
+      if (userMatches.length === 1 && userMatches[0]) {
+        return {
+          status: "RESOLVED",
+          category: {
+            id: userMatches[0].id,
+            name: userMatches[0].name,
+            type: userMatches[0].type,
+          },
+        };
+      }
+
       return {
         status: "AMBIGUOUS",
         categories: matches.map((c) => ({ id: c.id, name: c.name, type: c.type })),
@@ -130,5 +193,21 @@ export class IntentResolverService {
     }
 
     return { status: "NOT_FOUND", hint: categoryHint };
+  }
+
+  /**
+   * Resolve a free-text categoryName from AI to a user-accessible EXPENSE category.
+   *
+   * Phase 5.2 trust boundary: AI provides only a human-readable name (e.g. "makan",
+   * "kos", "transport"). This method fuzzy-matches it against the user's categories
+   * plus system defaults, all of type EXPENSE.
+   *
+   * Never trusts a categoryId from AI input.
+   */
+  static async resolveBudgetCategory(
+    userId: string,
+    categoryName: string
+  ): Promise<CategoryResolveResult> {
+    return this.resolveCategory(userId, "EXPENSE", categoryName);
   }
 }

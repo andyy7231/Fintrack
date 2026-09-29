@@ -1,13 +1,10 @@
 import { z } from "zod";
 
 /**
- * Phase 5.1 — Financial Intent Zod Schemas (Multi-Action Batch Support)
+ * Phase 5.1 / 5.2 — Financial Intent Zod Schemas (Multi-Action Batch Support)
  *
- * Strict validation models ensuring AI-extracted financial intents never
- * bypass application safety or inject invalid values into the financial core.
- *
- * Key change in 5.1: The AI provider now returns an ARRAY of intents,
- * allowing a single WhatsApp message to trigger multiple atomic actions.
+ * Phase 5.1: EXPENSE | INCOME | TRANSFER in batch
+ * Phase 5.2: BUDGET_ALLOCATION | BALANCE_QUERY added
  */
 
 // ─────────────────────────────────────────────────────────────
@@ -65,32 +62,64 @@ export const unknownIntentSchema = z.object({
   clarificationQuestion: z.string().optional(),
 });
 
-// A single financial action intent (used per-item in batch)
+// ─────────────────────────────────────────────────────────────
+// Phase 5.2: BUDGET_ALLOCATION intent
+//
+// AI provides only semantic information (categoryName, amount).
+// Server is responsible for resolving categoryName → categoryId.
+// AI MUST NOT provide categoryId.
+// ─────────────────────────────────────────────────────────────
+
+export const budgetAllocationIntentSchema = z.object({
+  intent: z.literal("BUDGET_ALLOCATION"),
+  amount: z
+    .number()
+    .positive("Nominal budget harus lebih besar dari 0")
+    .finite("Nominal harus berupa angka valid"),
+  /**
+   * Free-text category name from AI — server resolves this to a
+   * real user-scoped EXPENSE category ID. Never trust a categoryId from AI.
+   */
+  categoryName: z.string().trim().min(1, "Nama kategori budget tidak boleh kosong"),
+  confidence: z.number().min(0).max(1).optional(),
+});
+
+// ─────────────────────────────────────────────────────────────
+// Phase 5.2: BALANCE_QUERY intent
+//
+// Read-only intent. No mutation. No pending action. No confirmation.
+// AI only signals "user wants to know their balance."
+// Optional accountHint for account-specific queries.
+// ─────────────────────────────────────────────────────────────
+
+export const balanceQueryIntentSchema = z.object({
+  intent: z.literal("BALANCE_QUERY"),
+  /** If the user asked about a specific account, AI provides its name hint */
+  accountHint: z.string().trim().nullable().optional(),
+});
+
+// ─────────────────────────────────────────────────────────────
+// Discriminated union of all single-action intent types
+// ─────────────────────────────────────────────────────────────
+
 export const financialIntentSchema = z.discriminatedUnion("intent", [
   expenseIntentSchema,
   incomeIntentSchema,
   transferIntentSchema,
   unknownIntentSchema,
+  budgetAllocationIntentSchema,
+  balanceQueryIntentSchema,
 ]);
 
 // ─────────────────────────────────────────────────────────────
-// Phase 5.1: Batch schema — array of single-action intents
+// Phase 5.1+5.2: Batch schema — array of single-action intents
 // ─────────────────────────────────────────────────────────────
 
-/**
- * The AI provider always returns a batch (array), even when there is only
- * one action. This eliminates the single-vs-multi ambiguity at the source.
- *
- * Constraints:
- * - Min 1 item, max 10 items per message.
- * - Items are ordered as they appear in the original message.
- * - If the entire message is unclear, the array contains one UNKNOWN item.
- */
 export const financialBatchSchema = z.object({
   actions: z
     .array(financialIntentSchema)
     .min(1, "At least one action required")
-    .max(10, "Maximum 10 actions per message"),
+    .max(15, "Maximum 15 actions per message"),
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -101,5 +130,7 @@ export type ExpenseIntent = z.infer<typeof expenseIntentSchema>;
 export type IncomeIntent = z.infer<typeof incomeIntentSchema>;
 export type TransferIntent = z.infer<typeof transferIntentSchema>;
 export type UnknownIntent = z.infer<typeof unknownIntentSchema>;
+export type BudgetAllocationIntent = z.infer<typeof budgetAllocationIntentSchema>;
+export type BalanceQueryIntent = z.infer<typeof balanceQueryIntentSchema>;
 export type ParsedFinancialIntent = z.infer<typeof financialIntentSchema>;
 export type ParsedFinancialBatch = z.infer<typeof financialBatchSchema>;

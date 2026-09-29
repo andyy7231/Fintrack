@@ -3,7 +3,9 @@ import { whatsappPendingActions, transactions, transfers } from "@/db/schema";
 import { eq, and, desc, gte } from "drizzle-orm";
 import { TransactionService } from "@/services/transaction.service";
 import { TransferService } from "@/services/transfer.service";
+import { BudgetService } from "@/services/budget.service";
 import { ResolvedActionPayload } from "@/services/ai/parser.service";
+import { getJakartaDateString } from "@/services/ai/date.utils";
 
 const PENDING_ACTION_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -197,63 +199,112 @@ export class PendingActionService {
   }
 
   /**
-   * Execute all actions in the batch as a single atomic database transaction.
-   * Uses Drizzle's db.transaction() so either ALL commit or NONE do.
+   * Execute all actions in the batch atomically.
+   *
+   * EXPENSE / INCOME / TRANSFER run inside a single db.transaction().
+   * BUDGET_ALLOCATION calls BudgetService.createBudget which manages its own
+   * db calls — it cannot be nested inside a Drizzle transaction callback.
+   *
+   * Strategy:
+   * 1. Execute all EXPENSE/INCOME/TRANSFER in one db.transaction().
+   * 2. Execute BUDGET_ALLOCATION actions sequentially after.
+   * 3. If any budget creation fails, throw so the caller marks the pending action FAILED.
+   *    Transactions already committed are not rolled back (budget is additive/idempotent-ish).
+   *    This is an acceptable trade-off since budgets are setting limits, not financial mutations.
    */
   private static async _executeBatchAtomic(
     userId: string,
     actions: ResolvedActionPayload[]
   ): Promise<unknown[]> {
-    return db.transaction(async (tx) => {
-      const results: unknown[] = [];
+    const financialActions = actions.filter(
+      (a) => a.intentType === "EXPENSE" || a.intentType === "INCOME" || a.intentType === "TRANSFER"
+    );
+    const budgetActions = actions.filter((a) => a.intentType === "BUDGET_ALLOCATION");
 
-      for (const action of actions) {
-        if (action.intentType === "EXPENSE" || action.intentType === "INCOME") {
-          if (!action.accountId) {
-            throw new Error(`Akun transaksi wajib ada untuk item: ${action.description}`);
+    const results: unknown[] = [];
+
+    // Step 1: Execute financial mutations atomically
+    if (financialActions.length > 0) {
+      const txResults = await db.transaction(async (tx) => {
+        const txRes: unknown[] = [];
+
+        for (const action of financialActions) {
+          if (action.intentType === "EXPENSE" || action.intentType === "INCOME") {
+            if (!action.accountId) {
+              throw new Error(`Akun transaksi wajib ada untuk item: ${action.description}`);
+            }
+
+            const [created] = await tx
+              .insert(transactions)
+              .values({
+                userId,
+                accountId: action.accountId,
+                categoryId: action.categoryId || null,
+                type: action.intentType,
+                amount: action.amount.toFixed(2),
+                description: action.description,
+                transactionDate: new Date(action.transactionDate),
+                source: "WHATSAPP",
+                status: "CONFIRMED",
+              })
+              .returning();
+
+            txRes.push(created);
+          } else if (action.intentType === "TRANSFER") {
+            if (!action.fromAccountId || !action.toAccountId) {
+              throw new Error(
+                `Akun asal dan tujuan transfer wajib ada untuk item: ${action.description}`
+              );
+            }
+
+            const [created] = await tx
+              .insert(transfers)
+              .values({
+                userId,
+                fromAccountId: action.fromAccountId,
+                toAccountId: action.toAccountId,
+                amount: action.amount.toFixed(2),
+                description: action.description || null,
+                transferDate: new Date(action.transactionDate),
+              })
+              .returning();
+
+            txRes.push(created);
           }
-
-          const [created] = await tx
-            .insert(transactions)
-            .values({
-              userId,
-              accountId: action.accountId,
-              categoryId: action.categoryId || null,
-              type: action.intentType,
-              amount: action.amount.toFixed(2),
-              description: action.description,
-              transactionDate: new Date(action.transactionDate),
-              source: "WHATSAPP",
-              status: "CONFIRMED",
-            })
-            .returning();
-
-          results.push(created);
-        } else if (action.intentType === "TRANSFER") {
-          if (!action.fromAccountId || !action.toAccountId) {
-            throw new Error(
-              `Akun asal dan tujuan transfer wajib ada untuk item: ${action.description}`
-            );
-          }
-
-          const [created] = await tx
-            .insert(transfers)
-            .values({
-              userId,
-              fromAccountId: action.fromAccountId,
-              toAccountId: action.toAccountId,
-              amount: action.amount.toFixed(2),
-              description: action.description || null,
-              transferDate: new Date(action.transactionDate),
-            })
-            .returning();
-
-          results.push(created);
         }
-      }
 
-      return results;
-    });
+        return txRes;
+      });
+
+      results.push(...txResults);
+    }
+
+    // Step 2: Execute budget allocations via BudgetService (MONTHLY for current month)
+    if (budgetActions.length > 0) {
+      const jakartaDate = getJakartaDateString();
+      const [yearStr, monthStr] = jakartaDate.split("-");
+      const year = parseInt(yearStr!, 10);
+      const month = parseInt(monthStr!, 10);
+
+      for (const action of budgetActions) {
+        if (!action.budgetCategoryId) {
+          throw new Error(`Category ID wajib ada untuk budget: ${action.description}`);
+        }
+
+        const budget = await BudgetService.createBudget(userId, {
+          periodType: "MONTHLY",
+          categoryId: action.budgetCategoryId,
+          amount: action.amount.toFixed(2),
+          currency: "IDR",
+          year,
+          month,
+        });
+
+        results.push(budget);
+      }
+    }
+
+    return results;
   }
 
   /**

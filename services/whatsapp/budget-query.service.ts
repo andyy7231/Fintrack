@@ -1,5 +1,6 @@
 import { BudgetService, BudgetProgressDTO } from "@/services/budget.service";
 import { CategoryService } from "@/services/category.service";
+import { isBalanceQuery } from "@/services/ai/provider";
 
 function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID").format(Math.round(amount));
@@ -11,6 +12,11 @@ export class BudgetQueryService {
    */
   static isBudgetQuery(rawText: string): boolean {
     const text = rawText.toLowerCase().trim();
+
+    // Exclude balance queries (e.g., "berapa sisa uang saya", "saldo saya berapa")
+    if (isBalanceQuery(text)) {
+      return false;
+    }
 
     // Ignore salary split/allocation commands which have budget words
     if (

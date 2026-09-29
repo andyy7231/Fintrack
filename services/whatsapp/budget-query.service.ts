@@ -1,4 +1,4 @@
-import { BudgetService, BudgetProgressDTO } from "@/services/budget.service";
+﻿import { BudgetService, BudgetProgressDTO } from "@/services/budget.service";
 import { CategoryService } from "@/services/category.service";
 import { isBalanceQuery } from "@/services/ai/provider";
 
@@ -24,6 +24,27 @@ export class BudgetQueryService {
       (text.includes("bagi") || text.includes("alokasi") || text.includes("%"))
     ) {
       return false;
+    }
+
+    // CRITICAL FIX: Exclude budget ALLOCATION commands (budget + amount pattern)
+    // Pattern: "budget <category> <amount>" or "alokasi <category> <amount>"
+    // Examples to EXCLUDE: "budget nabung 500k", "budget makan 1jt", "alokasi transport 200rb"
+    const hasAmountPattern = /\d+(?:[.,]\d+)?\s*(?:ribu|rb|k|juta|jt|jt|m)?/i.test(text);
+    if (hasAmountPattern) {
+      // Has amount → likely a budget ALLOCATION command, not a query
+      // Only treat as query if it has explicit query keywords
+      const hasExplicitQueryKeyword = 
+        text.includes("cek") ||
+        text.includes("berapa") ||
+        text.includes("tinggal") ||
+        text.includes("sisa") ||
+        text.includes("status") ||
+        text.includes("lihat");
+      
+      if (!hasExplicitQueryKeyword) {
+        // "budget nabung 500k" → NOT a query (it's an allocation)
+        return false;
+      }
     }
 
     // Direct budget query patterns

@@ -1,4 +1,4 @@
-import { AccountService } from "@/services/account.service";
+﻿import { AccountService } from "@/services/account.service";
 import { CategoryService } from "@/services/category.service";
 
 export type AccountResolveResult =
@@ -198,9 +198,10 @@ export class IntentResolverService {
   /**
    * Resolve a free-text categoryName from AI to a user-accessible EXPENSE category.
    *
-   * Phase 5.2 trust boundary: AI provides only a human-readable name (e.g. "makan",
-   * "kos", "transport"). This method fuzzy-matches it against the user's categories
-   * plus system defaults, all of type EXPENSE.
+   * Uses Smart Category Matcher to:
+   * 1. Match exact or fuzzy category names
+   * 2. Use built-in keyword mapping (e.g., "nabung" → "Tabungan")
+   * 3. Auto-create new category if no good match found (similarity < 60%)
    *
    * Never trusts a categoryId from AI input.
    */
@@ -208,6 +209,23 @@ export class IntentResolverService {
     userId: string,
     categoryName: string
   ): Promise<CategoryResolveResult> {
-    return this.resolveCategory(userId, "EXPENSE", categoryName);
+    const { SmartCategoryMatcher } = await import("@/services/smart-category-matcher.service");
+    
+    // Use smart matcher to find or create category
+    const match = await SmartCategoryMatcher.findOrCreateCategory(
+      userId,
+      categoryName,
+      "EXPENSE"
+    );
+    
+    // Always return RESOLVED since smart matcher auto-creates if needed
+    return {
+      status: "RESOLVED",
+      category: {
+        id: match.categoryId,
+        name: match.categoryName,
+        type: "EXPENSE",
+      },
+    };
   }
 }

@@ -188,7 +188,7 @@ export class SalaryAllocationService {
               throw new Error("Tidak ada akun aktif yang tersedia.");
             }
 
-            await BudgetService.createBudget(userId, defaultAccount.id, {
+            await BudgetService.createBudget(userId, { accountId: defaultAccount.id,
               periodType: "MONTHLY",
               categoryId: matchedCat.id,
               amount: String(alloc.calculatedAmount),
@@ -385,3 +385,4 @@ export class SalaryAllocationService {
     return categories[0] || null;
   }
 }
+

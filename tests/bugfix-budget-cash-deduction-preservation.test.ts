@@ -29,9 +29,7 @@ async function runPreservationTests() {
 
   const testUserId = "test_preservation_" + Date.now();
   const testUserBId = "test_preservation_b_" + Date.now();
-  let testAccountAId: string;
-  let testAccountBId: string;
-  let testAccountA2Id: string; // Second account for user A
+  let testAccountAId: string | undefined; let testAccountBId: string | undefined; let testAccountA2Id: string | undefined; // Second account for user A
   let incomeCategoryId: string;
   let expenseCategoryId: string;
 
@@ -122,8 +120,7 @@ async function runPreservationTests() {
         amount: "500000",
         description: "Test Income",
         transactionDate: new Date(),
-        source: "WEB",
-      });
+        }); 
 
       const finalBalance = await AccountService.getAccountBalance(
         testUserId,
@@ -162,8 +159,7 @@ async function runPreservationTests() {
         amount: "200000",
         description: "Test Expense",
         transactionDate: new Date(),
-        source: "WEB",
-      });
+        }); 
 
       const finalBalance = await AccountService.getAccountBalance(
         testUserId,
@@ -455,15 +451,7 @@ async function runPreservationTests() {
     await db.delete(transactions).where(eq(transactions.userId, testUserId));
     await db.delete(transactions).where(eq(transactions.userId, testUserBId));
     
-    if (testAccountAId) {
-      await db.delete(accounts).where(eq(accounts.id, testAccountAId));
-    }
-    if (testAccountA2Id) {
-      await db.delete(accounts).where(eq(accounts.id, testAccountA2Id));
-    }
-    if (testAccountBId) {
-      await db.delete(accounts).where(eq(accounts.id, testAccountBId));
-    }
+    
     
     await db.delete(user).where(eq(user.id, testUserId));
     await db.delete(user).where(eq(user.id, testUserBId));
@@ -482,3 +470,6 @@ runPreservationTests()
     console.error("❌ Preservation tests failed:", error);
     process.exit(1);
   });
+
+
+

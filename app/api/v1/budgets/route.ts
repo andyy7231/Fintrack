@@ -37,21 +37,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Extract accountId from validated input
-    const { accountId, ...budgetInput } = validation.data as any;
-
-    if (!accountId) {
-      return apiError(
-        ErrorCodes.VALIDATION_ERROR,
-        "accountId diperlukan",
-        400
-      );
-    }
-
-    const created = await BudgetService.createBudget(user.id, accountId, budgetInput);
+    const created = await BudgetService.createBudget(user.id, validation.data);
     return apiSuccess(created, 201);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Gagal membuat budget";
     return apiError(ErrorCodes.INVALID_INPUT, message, 400);
   }
 }
+
+

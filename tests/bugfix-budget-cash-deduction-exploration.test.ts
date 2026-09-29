@@ -25,8 +25,7 @@ async function runBugExplorationTest() {
   console.log("  EXPECTED: This test FAILS on unfixed code (confirms bug exists)");
   console.log("=================================================================\n");
 
-  const testUserId = "test_bug_exploration_" + Date.now();
-  let testAccountId: string;
+  const testUserId = "test_bug_exploration_" + Date.now(); let testAccountId: string | undefined;
   let foodCategoryId: string;
   let housingCategoryId: string;
   let savingsCategoryId: string;
@@ -101,10 +100,7 @@ async function runBugExplorationTest() {
     console.log("   Creating budget allocation: 500,000 for 'Pengeluaran Lain' category...");
     
     try {
-      const budget = await BudgetService.createBudget(
-        testUserId,
-        testAccountId, // This parameter likely doesn't exist on unfixed code
-        {
+      const budget = await BudgetService.createBudget(testUserId, { accountId: testAccountId,
           categoryId: savingsCategoryId,
           periodType: "MONTHLY",
           month: new Date().getMonth() + 1,
@@ -127,9 +123,7 @@ async function runBugExplorationTest() {
       // Try without accountId to see original behavior
       console.log("   Attempting budget creation WITHOUT accountId (original behavior)...");
       try {
-        const budget = await BudgetService.createBudget(
-          testUserId,
-          {
+        const budget = await BudgetService.createBudget(testUserId, { accountId: testAccountId,
             categoryId: savingsCategoryId,
             periodType: "MONTHLY",
             month: new Date().getMonth() + 1,
@@ -157,7 +151,7 @@ async function runBugExplorationTest() {
     try {
       // Create three budgets: 600k (makan) + 750k (housing) + 500k (other) = 1,850k
       console.log("   Creating budget: 600,000 for 'Makanan & Minuman'...");
-      await BudgetService.createBudget(testUserId, {
+      await BudgetService.createBudget(testUserId, { accountId: testAccountId,
         categoryId: foodCategoryId,
         periodType: "MONTHLY",
         month: new Date().getMonth() + 1,
@@ -167,7 +161,7 @@ async function runBugExplorationTest() {
       } as any);
 
       console.log("   Creating budget: 750,000 for 'Tempat Tinggal'...");
-      await BudgetService.createBudget(testUserId, {
+      await BudgetService.createBudget(testUserId, { accountId: testAccountId,
         categoryId: housingCategoryId,
         periodType: "MONTHLY",
         month: new Date().getMonth() + 1,
@@ -177,7 +171,7 @@ async function runBugExplorationTest() {
       } as any);
 
       console.log("   Creating budget: 500,000 for 'Pengeluaran Lain'...");
-      await BudgetService.createBudget(testUserId, {
+      await BudgetService.createBudget(testUserId, { accountId: testAccountId,
         categoryId: savingsCategoryId,
         periodType: "MONTHLY",
         month: new Date().getMonth() + 1,
@@ -295,3 +289,9 @@ runBugExplorationTest()
     console.error("❌ Bug exploration test failed:", error);
     process.exit(1);
   });
+
+
+
+
+
+

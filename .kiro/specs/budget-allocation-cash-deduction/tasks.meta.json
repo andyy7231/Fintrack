@@ -1,0 +1,115 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696760438
+      },
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696792849
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696760747
+      }
+    ],
+    "3.1 Create database migration for accountId in budgets table": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696760910
+      }
+    ],
+    "3.2 Update budget schema to include accountId field": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696761103
+      }
+    ],
+    "3.3 Implement AccountService.getFreeCash() method": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696761359
+      }
+    ],
+    "3.4 Update AccountWithBalance interface to include freeCash field": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696761533
+      }
+    ],
+    "3.5 Update BudgetService.createBudget to validate and reduce free cash": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696761721
+      }
+    ],
+    "3.6 Update budget validation schemas to include accountId": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696761912
+      }
+    ],
+    "3.7 Update budget API route to pass accountId to service": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762079
+      }
+    ],
+    "3.8 Update DashboardService to include freeCash in summary": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762268
+      }
+    ],
+    "3.9 Update Dashboard UI to display both Uang Keseluruhan and Uang Free": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762426
+      }
+    ],
+    "3.10 Update WhatsApp budget handler to use default account": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762635
+      }
+    ],
+    "3.11 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762822
+      }
+    ],
+    "3.12 Verify preservation tests still pass": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696762998
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790696763183
+      }
+    ]
+  }
+}

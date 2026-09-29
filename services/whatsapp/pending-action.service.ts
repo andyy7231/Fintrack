@@ -304,7 +304,7 @@ export class PendingActionService {
           throw new Error("Tidak ada akun aktif yang tersedia.");
         }
 
-        const budget = await BudgetService.createBudget(userId, defaultAccount.id, {
+        const budget = await BudgetService.createBudget(userId, { accountId: defaultAccount.id,
           periodType: "MONTHLY",
           categoryId: action.budgetCategoryId,
           amount: action.amount.toFixed(2),
@@ -376,3 +376,4 @@ export class PendingActionService {
     return result.length > 0;
   }
 }
+

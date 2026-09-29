@@ -181,7 +181,7 @@ async function runPhase6Tests() {
   // ──────────────────────────────────────────────────────────────────────────
   let budget1Id: string;
   await test("Create MONTHLY budget for EXPENSE category", async () => {
-    const budget = await BudgetService.createBudget(USER_A_ID, {
+    const budget = await BudgetService.createBudget(USER_A_ID, { accountId: accountAId,
       periodType: "MONTHLY",
       categoryId: expenseCatId,
       amount: "1500000",
@@ -208,7 +208,7 @@ async function runPhase6Tests() {
   await test("Reject budget creation for INCOME category", async () => {
     let threw = false;
     try {
-      await BudgetService.createBudget(USER_A_ID, {
+      await BudgetService.createBudget(USER_A_ID, { accountId: accountAId,
         periodType: "MONTHLY",
         categoryId: incomeCatId,
         amount: "1000000",
@@ -230,7 +230,7 @@ async function runPhase6Tests() {
   await test("Reject duplicate/overlapping budget for same category+period", async () => {
     let threw = false;
     try {
-      await BudgetService.createBudget(USER_A_ID, {
+      await BudgetService.createBudget(USER_A_ID, { accountId: accountAId,
         periodType: "MONTHLY",
         categoryId: expenseCatId,
         amount: "999999",
@@ -334,7 +334,7 @@ async function runPhase6Tests() {
   // ──────────────────────────────────────────────────────────────────────────
   let customBudgetId: string;
   await test("Create CUSTOM period budget", async () => {
-    const budget = await BudgetService.createBudget(USER_A_ID, {
+    const budget = await BudgetService.createBudget(USER_A_ID, { accountId: accountAId,
       periodType: "CUSTOM",
       categoryId: customExpCatId,
       amount: "500000",
@@ -496,7 +496,7 @@ async function runPhase6Tests() {
   await test("Multiple budgets (different categories) can coexist in same period", async () => {
     // customExpCatId was deleted in test 15; create a new budget for transport
     // First re-insert the custom cat if needed
-    const transportBudget = await BudgetService.createBudget(USER_A_ID, {
+    const transportBudget = await BudgetService.createBudget(USER_A_ID, { accountId: accountAId,
       periodType: "MONTHLY",
       categoryId: customExpCatId,
       amount: "800000",
@@ -587,3 +587,6 @@ runPhase6Tests().catch((err) => {
   console.error("Test runner crashed:", err);
   process.exit(1);
 });
+
+
+

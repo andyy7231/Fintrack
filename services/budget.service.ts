@@ -235,17 +235,14 @@ export class BudgetService {
   // CREATE
   // ──────────────────────────────────────────────────────────────────────────────
 
-  static async createBudget(
-    userId: string,
-    accountId: string,
-    input: CreateBudgetInput
+  static async createBudget(userId: string, input: CreateBudgetInput
   ): Promise<BudgetProgressDTO> {
     // 1. Validate & resolve category (EXPENSE only, ownership enforced)
     await resolveExpenseCategory(userId, input.categoryId);
 
     // 2. Validate sufficient free cash
     const { AccountService } = await import("./account.service");
-    const freeCash = await AccountService.getFreeCash(userId, accountId);
+    const freeCash = await AccountService.getFreeCash(userId, input.accountId);
     const allocationAmount = parseFloat(input.amount);
     
     if (allocationAmount > freeCash) {
@@ -283,9 +280,7 @@ export class BudgetService {
     // 5. Insert with accountId
     const [created] = await db
       .insert(budgets)
-      .values({
-        userId,
-        accountId,
+      .values({ userId, accountId: input.accountId,
         categoryId: input.categoryId,
         periodType: input.periodType,
         startDate: startUtc,
@@ -567,3 +562,4 @@ export class BudgetService {
     return this.listBudgets(userId);
   }
 }
+

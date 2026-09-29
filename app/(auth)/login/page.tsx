@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth/client";
 import { loginSchema } from "@/schemas/auth.schema";
+import { phoneToSyntheticEmail } from "@/services/whatsapp/phone.utils";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ export default function LoginPage() {
     setFieldErrors({});
 
     // Client-side validation via Zod
-    const validation = loginSchema.safeParse({ email, password });
+    const validation = loginSchema.safeParse({ identifier, password });
     if (!validation.success) {
       const errors: Record<string, string> = {};
       for (const issue of validation.error.issues) {
@@ -36,14 +37,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      let targetEmail = validation.data.identifier;
+      // If does not contain @, treat as phone number
+      if (!targetEmail.includes("@")) {
+        try {
+          targetEmail = phoneToSyntheticEmail(targetEmail);
+        } catch {
+          setServerError("Format nomor WhatsApp tidak valid. Contoh: 081234567890");
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await signIn.email({
-        email: validation.data.email,
+        email: targetEmail,
         password: validation.data.password,
       });
 
       if (response.error) {
-        // Safe, generic authentication error message to prevent user enumeration
-        setServerError("Email atau password yang Anda masukkan salah.");
+        setServerError("Nomor WhatsApp atau password yang Anda masukkan salah.");
       } else {
         router.push("/dashboard");
         router.refresh();
@@ -82,23 +94,23 @@ export default function LoginPage() {
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
           <div>
             <label
-              htmlFor="email"
+              htmlFor="identifier"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Email
+              Nomor WhatsApp
             </label>
             <input
-              id="email"
-              type="email"
+              id="identifier"
+              type="text"
               required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              placeholder="nama@email.com"
+              placeholder="081234567890"
             />
-            {fieldErrors.email && (
-              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+            {fieldErrors.identifier && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.identifier}</p>
             )}
           </div>
 

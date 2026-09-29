@@ -39,3 +39,23 @@ export function normalizePhoneNumber(raw: string): string {
 
   throw new Error(`Invalid phone number format: "${raw}"`);
 }
+
+export function phoneToSyntheticEmail(raw: string): string {
+  const normalized = normalizePhoneNumber(raw);
+  const digits = normalized.replace(/^\+/, "");
+  return `${digits}@fintrack.id`;
+}
+
+export function isSyntheticEmail(email?: string | null): boolean {
+  if (!email) return false;
+  return email.endsWith("@fintrack.id");
+}
+
+export function formatUserIdentifier(emailOrPhone?: string | null): string {
+  if (!emailOrPhone) return "";
+  if (emailOrPhone.endsWith("@fintrack.id")) {
+    const digits = emailOrPhone.replace("@fintrack.id", "");
+    return `+${digits}`;
+  }
+  return emailOrPhone;
+}

@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUp } from "@/lib/auth/client";
 import { registerSchema } from "@/schemas/auth.schema";
+import { phoneToSyntheticEmail } from "@/services/whatsapp/phone.utils";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -24,7 +25,7 @@ export default function RegisterPage() {
     // Client-side validation via Zod
     const validation = registerSchema.safeParse({
       name,
-      email,
+      phoneNumber,
       password,
       confirmPassword,
     });
@@ -44,26 +45,42 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      const syntheticEmail = phoneToSyntheticEmail(validation.data.phoneNumber);
+
       const response = await signUp.email({
         name: validation.data.name,
-        email: validation.data.email,
+        email: syntheticEmail,
         password: validation.data.password,
       });
 
       if (response.error) {
         if (response.error.status === 422 || response.error.code === "USER_ALREADY_EXISTS") {
-          setServerError("Email sudah terdaftar. Silakan gunakan email lain atau login.");
+          setServerError("Nomor WhatsApp ini sudah terdaftar. Silakan langsung login.");
         } else {
           setServerError(
             response.error.message || "Gagal membuat akun. Silakan periksa kembali data Anda."
           );
         }
-      } else {
-        router.push("/dashboard");
-        router.refresh();
+        return;
       }
-    } catch {
-      setServerError("Terjadi kendala saat memproses pendaftaran. Silakan coba lagi.");
+
+      // Initialize WhatsApp contact link & default finance data automatically
+      try {
+        await fetch("/api/v1/auth/setup-account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: validation.data.phoneNumber }),
+        });
+      } catch (setupErr) {
+        console.warn("Setup account background error:", setupErr);
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: unknown) {
+      console.error("Register submit error:", err);
+      const msg = err instanceof Error ? err.message : "Terjadi kendala saat memproses pendaftaran. Silakan coba lagi.";
+      setServerError(msg);
     } finally {
       setLoading(false);
     }
@@ -80,7 +97,7 @@ export default function RegisterPage() {
             Daftar Akun FinTrack
           </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Mulai kelola keuangan pribadi Anda dengan mudah dan aman
+            Daftar dengan nomor WhatsApp Anda untuk langsung mencatat keuangan di Web & WhatsApp tanpa verifikasi ulang
           </p>
         </div>
 
@@ -118,23 +135,26 @@ export default function RegisterPage() {
 
           <div>
             <label
-              htmlFor="email"
+              htmlFor="phoneNumber"
               className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Email
+              Nomor WhatsApp
             </label>
             <input
-              id="email"
-              type="email"
+              id="phoneNumber"
+              type="tel"
               required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm placeholder-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              placeholder="nama@email.com"
+              placeholder="Contoh: 081234567890 atau +628..."
             />
-            {fieldErrors.email && (
-              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.email}</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Nomor ini akan otomatis terhubung ke bot FinTrack untuk catat keuangan lewat WhatsApp
+            </p>
+            {fieldErrors.phoneNumber && (
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{fieldErrors.phoneNumber}</p>
             )}
           </div>
 

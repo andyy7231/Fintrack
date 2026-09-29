@@ -13,10 +13,18 @@ export default async function BudgetsPage() {
 
   const { user } = sessionData;
 
-  const [budgets, expenseCategories] = await Promise.all([
-    BudgetService.listBudgets(user.id),
-    CategoryService.getCategories(user.id, "EXPENSE"),
+  const [rawBudgets, expenseCategories] = await Promise.all([
+    BudgetService.listBudgets(user.id).catch((err) => {
+      console.error("Failed to list budgets:", err);
+      return [];
+    }),
+    CategoryService.getCategories(user.id, "EXPENSE").catch((err) => {
+      console.error("Failed to get categories:", err);
+      return [];
+    }),
   ]);
+
+  const budgets = JSON.parse(JSON.stringify(rawBudgets));
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">

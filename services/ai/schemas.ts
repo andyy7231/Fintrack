@@ -1,11 +1,18 @@
 import { z } from "zod";
 
 /**
- * Phase 5 — Financial Intent Zod Schemas
+ * Phase 5.1 — Financial Intent Zod Schemas (Multi-Action Batch Support)
  *
  * Strict validation models ensuring AI-extracted financial intents never
  * bypass application safety or inject invalid values into the financial core.
+ *
+ * Key change in 5.1: The AI provider now returns an ARRAY of intents,
+ * allowing a single WhatsApp message to trigger multiple atomic actions.
  */
+
+// ─────────────────────────────────────────────────────────────
+// Single-action intent schemas
+// ─────────────────────────────────────────────────────────────
 
 export const expenseIntentSchema = z.object({
   intent: z.literal("EXPENSE"),
@@ -58,6 +65,7 @@ export const unknownIntentSchema = z.object({
   clarificationQuestion: z.string().optional(),
 });
 
+// A single financial action intent (used per-item in batch)
 export const financialIntentSchema = z.discriminatedUnion("intent", [
   expenseIntentSchema,
   incomeIntentSchema,
@@ -65,8 +73,33 @@ export const financialIntentSchema = z.discriminatedUnion("intent", [
   unknownIntentSchema,
 ]);
 
+// ─────────────────────────────────────────────────────────────
+// Phase 5.1: Batch schema — array of single-action intents
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * The AI provider always returns a batch (array), even when there is only
+ * one action. This eliminates the single-vs-multi ambiguity at the source.
+ *
+ * Constraints:
+ * - Min 1 item, max 10 items per message.
+ * - Items are ordered as they appear in the original message.
+ * - If the entire message is unclear, the array contains one UNKNOWN item.
+ */
+export const financialBatchSchema = z.object({
+  actions: z
+    .array(financialIntentSchema)
+    .min(1, "At least one action required")
+    .max(10, "Maximum 10 actions per message"),
+});
+
+// ─────────────────────────────────────────────────────────────
+// TypeScript type exports
+// ─────────────────────────────────────────────────────────────
+
 export type ExpenseIntent = z.infer<typeof expenseIntentSchema>;
 export type IncomeIntent = z.infer<typeof incomeIntentSchema>;
 export type TransferIntent = z.infer<typeof transferIntentSchema>;
 export type UnknownIntent = z.infer<typeof unknownIntentSchema>;
 export type ParsedFinancialIntent = z.infer<typeof financialIntentSchema>;
+export type ParsedFinancialBatch = z.infer<typeof financialBatchSchema>;

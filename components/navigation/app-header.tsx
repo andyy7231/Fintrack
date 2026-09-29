@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { formatUserIdentifier } from "@/services/whatsapp/phone.utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -55,7 +56,7 @@ export function AppHeader({ userEmail }: { userEmail?: string }) {
         <div className="flex items-center space-x-3">
           {userEmail && (
             <span className="hidden lg:inline-block text-xs text-zinc-500 dark:text-zinc-400">
-              {userEmail}
+              {formatUserIdentifier(userEmail)}
             </span>
           )}
           <LogoutButton />

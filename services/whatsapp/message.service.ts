@@ -7,6 +7,10 @@ import { WhatsAppVerificationService } from "./verification.service";
 import { PendingActionService } from "./pending-action.service";
 import { FinancialParserService } from "@/services/ai/parser.service";
 import { IWhatsAppClient, whatsAppClient } from "./client";
+import { BudgetQueryService } from "./budget-query.service";
+import { SalaryAllocationService } from "./salary-allocation.service";
+import { GreetingService } from "./greeting.service";
+import { TransactionDeletionService } from "./transaction-deletion.service";
 
 export class WhatsAppMessageService {
   /**
@@ -103,11 +107,12 @@ export class WhatsAppMessageService {
         );
 
         if (!mapping) {
-          // Unlinked or unverified contact
+          // Unlinked or unverified contact — direct to web registration
           finalStatus = "IGNORED";
           outboundReply =
-            "Nomor WhatsApp ini belum terhubung atau belum diverifikasi dengan akun FinTrack.\n\n" +
-            "Silakan hubungkan nomor WhatsApp Anda terlebih dahulu melalui menu profil aplikasi FinTrack.";
+            "Nomor WhatsApp ini belum terdaftar di FinTrack.\n\n" +
+            "Silakan daftar terlebih dahulu di website FinTrack menggunakan nomor WhatsApp Anda, " +
+            "lalu Anda bisa langsung menggunakan bot ini untuk mencatat keuangan.";
         } else {
           matchedUserId = mapping.userId;
 
@@ -149,13 +154,15 @@ export class WhatsAppMessageService {
                   "Kirim pesan transaksi baru untuk memulai, contoh: 'Beli kopi 25 ribu'.";
               } else {
                 try {
-                  await PendingActionService.confirmAction(
+                  const confirmResult = await PendingActionService.confirmAction(
                     activeAction.id,
                     mapping.userId
                   );
+                  const count = confirmResult.actionCount || 1;
                   outboundReply =
-                    "Transaksi berhasil dicatat!\n\n" +
-                    "Catatan keuangan Anda telah berhasil diperbarui.";
+                    count > 1
+                      ? `✅ ${count} transaksi berhasil dicatat sekaligus!\n\nCatatan keuangan Anda telah diperbarui.`
+                      : "✅ Transaksi berhasil dicatat!\n\nCatatan keuangan Anda telah diperbarui.";
                 } catch (err: unknown) {
                   const errMsg =
                     err instanceof Error ? err.message : "Gagal mengonfirmasi transaksi";
@@ -183,6 +190,27 @@ export class WhatsAppMessageService {
                 outboundReply = "Tidak ada transaksi yang perlu dibatalkan.";
               }
               finalStatus = "PROCESSED";
+            } else if (GreetingService.isGreeting(trimmedText)) {
+              outboundReply = await GreetingService.handleGreeting(mapping.userId);
+              finalStatus = "PROCESSED";
+            } else if (TransactionDeletionService.isDeleteCommand(trimmedText)) {
+              outboundReply = await TransactionDeletionService.handleDeleteCommand(
+                mapping.userId,
+                trimmedText
+              );
+              finalStatus = "PROCESSED";
+            } else if (BudgetQueryService.isBudgetQuery(trimmedText)) {
+              outboundReply = await BudgetQueryService.handleBudgetQuery(
+                mapping.userId,
+                trimmedText
+              );
+              finalStatus = "PROCESSED";
+            } else if (SalaryAllocationService.isSalaryAllocation(trimmedText)) {
+              outboundReply = await SalaryAllocationService.handleSalaryAllocation(
+                mapping.userId,
+                trimmedText
+              );
+              finalStatus = "PROCESSED";
             } else {
               // Step 5: Natural Language Financial Parser
               const parseResult = await parser.processFinancialText(
@@ -195,11 +223,10 @@ export class WhatsAppMessageService {
                   mapping.userId,
                   message.normalizedPhoneNumber,
                   message.providerMessageId,
-                  parseResult.intentType,
-                  parseResult.payload
+                  parseResult.actions
                 );
 
-                outboundReply = `${parseResult.summaryText}\n\n${parseResult.confirmationPrompt}`;
+                outboundReply = parseResult.confirmationPrompt;
               } else if (parseResult.status === "NEEDS_CLARIFICATION") {
                 outboundReply = parseResult.clarificationText;
               } else {

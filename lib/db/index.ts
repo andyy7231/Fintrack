@@ -5,15 +5,20 @@ import * as schema from "@/db/schema";
 
 loadEnvConfig(process.cwd());
 
-const connectionString =
+const rawConnectionString =
   process.env.DATABASE_URL || "postgresql://postgres:postgres@localhost:5432/fintrack";
+
+// Automatically switch Supabase pooler from session mode (5432) to transaction mode (6543)
+// to prevent EMAXCONNSESSION errors in serverless environments
+const connectionString = rawConnectionString.includes("pooler.supabase.com:5432")
+  ? rawConnectionString.replace(":5432", ":6543")
+  : rawConnectionString;
 
 if (!process.env.DATABASE_URL && process.env.NODE_ENV === "production") {
   console.warn(
     "[FinTrack DB] DATABASE_URL is not set. Please set DATABASE_URL in your production environment."
   );
 }
-
 
 /**
  * PostgreSQL client using postgres.js driver.
@@ -35,7 +40,10 @@ const client =
   globalForDb.pgClient ??
   postgres(connectionString, {
     ssl: isRemoteDb ? "require" : undefined,
-    prepare: false, // Recommended for transaction poolers
+    prepare: false, // Required for transaction poolers
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 10,
   });
 
 if (process.env.NODE_ENV !== "production") {

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/auth/session";
 import { AppHeader } from "@/components/navigation/app-header";
+import { UserMappingService } from "@/services/whatsapp/user-mapping.service";
+import { isSyntheticEmail, formatUserIdentifier } from "@/services/whatsapp/phone.utils";
 
 export default async function ProfilePage() {
   const sessionData = await getSession();
@@ -13,6 +15,10 @@ export default async function ProfilePage() {
   const { user } = sessionData;
   const currency = ((user as Record<string, unknown>).currency as string) || "IDR";
   const timezone = ((user as Record<string, unknown>).timezone as string) || "Asia/Jakarta";
+
+  const contacts = await UserMappingService.getUserContacts(user.id);
+  const primaryContact = contacts[0];
+  const isWaUser = isSyntheticEmail(user.email) || Boolean(primaryContact);
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
@@ -44,19 +50,37 @@ export default async function ProfilePage() {
               <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
                 Nama Lengkap
               </dt>
-              <dd className="mt-1 text-sm text-zinc-900 sm:col-span-2 sm:mt-0 dark:text-zinc-100">
+              <dd className="mt-1 text-sm text-zinc-900 sm:col-span-2 sm:mt-0 dark:text-zinc-100 font-medium">
                 {user.name}
               </dd>
             </div>
 
-            <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-              <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                Alamat Email
-              </dt>
-              <dd className="mt-1 text-sm text-zinc-900 sm:col-span-2 sm:mt-0 dark:text-zinc-100">
-                {user.email}
-              </dd>
-            </div>
+            {isWaUser && (
+              <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  Nomor WhatsApp
+                </dt>
+                <dd className="mt-1 text-sm text-zinc-900 sm:col-span-2 sm:mt-0 dark:text-zinc-100 flex items-center gap-2">
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {primaryContact?.phoneNumber || formatUserIdentifier(user.email)}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    ✓ Terhubung & Terverifikasi
+                  </span>
+                </dd>
+              </div>
+            )}
+
+            {!isSyntheticEmail(user.email) && (
+              <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+                <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  Alamat Email
+                </dt>
+                <dd className="mt-1 text-sm text-zinc-900 sm:col-span-2 sm:mt-0 dark:text-zinc-100">
+                  {user.email}
+                </dd>
+              </div>
+            )}
 
             <div className="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
               <dt className="text-sm font-medium text-zinc-500 dark:text-zinc-400">

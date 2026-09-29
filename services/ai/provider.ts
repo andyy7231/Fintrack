@@ -266,7 +266,7 @@ export class MockAIProvider implements FinancialParserProvider {
       if (lower.includes("beli") || lower.includes("makan") || lower.includes("bayar")) {
         return { intent: "UNKNOWN", reason: "MISSING_AMOUNT", clarificationQuestion: "Berapa nominal transaksi yang ingin dicatat?" };
       }
-      return { intent: "UNKNOWN", reason: "UNCLEAR_INTENT", clarificationQuestion: "Maaf, saya belum memahami pesan Anda. Coba tulis seperti: 'Beli kopi 25 ribu'." };
+      return { intent: "UNKNOWN", reason: "UNCLEAR_INTENT", clarificationQuestion: "[DEBUG: MOCK AI PROVIDER - KEYWORD BASED] Maaf, saya belum memahami pesan Anda. Coba tulis seperti: 'Beli kopi 25 ribu'." };
     }
 
     // 3. Ambiguous expense

@@ -71,7 +71,7 @@ export class GeminiAIProvider implements FinancialParserProvider {
         actions: [{
           intent: "UNKNOWN",
           reason: "AI_PARSE_ERROR",
-          clarificationQuestion: "Maaf, saya belum dapat memahami pesan Anda. Coba tulis seperti: 'Beli kopi 25 ribu' atau 'Gajian 5 juta'.",
+          clarificationQuestion: "[DEBUG: GEMINI AI PROVIDER] Parse error: " + error.message + "\n\nMaaf, saya belum dapat memahami pesan Anda.",
         }],
       };
     }

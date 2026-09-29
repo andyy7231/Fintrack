@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+﻿import { db } from "@/lib/db";
 import { whatsappMessages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { WhatsAppInboundMessage, ProcessedWhatsAppMessage } from "./types";
@@ -11,6 +11,7 @@ import { BudgetQueryService } from "./budget-query.service";
 import { SalaryAllocationService } from "./salary-allocation.service";
 import { GreetingService } from "./greeting.service";
 import { TransactionDeletionService } from "./transaction-deletion.service";
+import { TransactionQueryService } from "./transaction-query.service";
 
 export class WhatsAppMessageService {
   /**
@@ -107,7 +108,7 @@ export class WhatsAppMessageService {
         );
 
         if (!mapping) {
-          // Unlinked or unverified contact — direct to web registration
+          // Unlinked or unverified contact â€” direct to web registration
           finalStatus = "IGNORED";
           outboundReply =
             "Nomor WhatsApp ini belum terdaftar di FinTrack.\n\n" +
@@ -161,8 +162,8 @@ export class WhatsAppMessageService {
                   const count = confirmResult.actionCount || 1;
                   outboundReply =
                     count > 1
-                      ? `✅ ${count} transaksi berhasil dicatat sekaligus!\n\nCatatan keuangan Anda telah diperbarui.`
-                      : "✅ Transaksi berhasil dicatat!\n\nCatatan keuangan Anda telah diperbarui.";
+                      ? `âœ… ${count} transaksi berhasil dicatat sekaligus!\n\nCatatan keuangan Anda telah diperbarui.`
+                      : "âœ… Transaksi berhasil dicatat!\n\nCatatan keuangan Anda telah diperbarui.";
                 } catch (err: unknown) {
                   const errMsg =
                     err instanceof Error ? err.message : "Gagal mengonfirmasi transaksi";
@@ -207,6 +208,12 @@ export class WhatsAppMessageService {
               finalStatus = "PROCESSED";
             } else if (SalaryAllocationService.isSalaryAllocation(trimmedText)) {
               outboundReply = await SalaryAllocationService.handleSalaryAllocation(
+                mapping.userId,
+                trimmedText
+              );
+              finalStatus = "PROCESSED";
+            } else if (TransactionQueryService.isTransactionQuery(trimmedText)) {
+              outboundReply = await TransactionQueryService.handleTransactionQuery(
                 mapping.userId,
                 trimmedText
               );

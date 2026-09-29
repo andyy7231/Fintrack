@@ -27,9 +27,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
     }
     
     this.genAI = new GoogleGenerativeAI(key);
-    // Use gemini-2.5-flash (available for this API key) for best performance/cost ratio
+    // Use gemini-flash-latest (generic alias, supports generateContent) for best performance/cost ratio
     this.model = this.genAI.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
+      model: "gemini-flash-latest",
       generationConfig: {
         temperature: 0.1, // Low temperature for consistent financial parsing
         topP: 0.8,

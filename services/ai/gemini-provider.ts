@@ -9,16 +9,19 @@ import { FinancialParserInput, FinancialParserProvider } from "./provider";
 /**
  * Gemini AI Provider for Natural Language Financial Parsing
  * 
- * Uses Google Gemini 2.0 Flash for intelligent intent detection
+ * Uses Google Gemini Flash for intelligent intent detection
  * with support for:
  * - Natural, conversational language
  * - Typos and abbreviations
  * - Context-aware interpretation
  * - Multi-language support (Indonesian + English)
+ * - Automatic retry with exponential backoff for transient failures
  */
 export class GeminiAIProvider implements FinancialParserProvider {
   private genAI: GoogleGenerativeAI;
   private model: any;
+  private readonly MAX_RETRIES = 2;
+  private readonly INITIAL_RETRY_DELAY = 500; // ms
 
   constructor(apiKey?: string) {
     const key = apiKey || process.env.GEMINI_API_KEY;
@@ -27,7 +30,7 @@ export class GeminiAIProvider implements FinancialParserProvider {
     }
     
     this.genAI = new GoogleGenerativeAI(key);
-    // Use gemini-flash-latest (generic alias, supports generateContent) for best performance/cost ratio
+    // Use gemini-flash-latest (generic alias, supports generateContent)
     this.model = this.genAI.getGenerativeModel({ 
       model: "gemini-flash-latest",
       generationConfig: {
@@ -40,6 +43,13 @@ export class GeminiAIProvider implements FinancialParserProvider {
   }
 
   async parseFinancialMessage(input: FinancialParserInput): Promise<ParsedFinancialBatch> {
+    return this.parseWithRetry(input, 0);
+  }
+
+  private async parseWithRetry(
+    input: FinancialParserInput,
+    attemptNumber: number
+  ): Promise<ParsedFinancialBatch> {
     const systemPrompt = this.buildSystemPrompt(input);
     const userMessage = input.text;
 
@@ -64,17 +74,43 @@ export class GeminiAIProvider implements FinancialParserProvider {
       // Validate with Zod schema
       return financialBatchSchema.parse(parsed);
     } catch (error: any) {
-      console.error("[GeminiAIProvider] Parse error:", error.message);
+      const errorMessage = error.message || "";
+      const is503 = errorMessage.includes("503") || errorMessage.includes("Service Unavailable");
+      const is429 = errorMessage.includes("429") || errorMessage.includes("Too Many Requests");
+      const isTransient = is503 || is429;
+
+      console.error(`[GeminiAIProvider] Attempt ${attemptNumber + 1} failed:`, errorMessage);
+
+      // Retry logic for transient errors
+      if (isTransient && attemptNumber < this.MAX_RETRIES) {
+        const delay = this.INITIAL_RETRY_DELAY * Math.pow(2, attemptNumber);
+        console.log(`[GeminiAIProvider] Retrying in ${delay}ms...`);
+        
+        await this.sleep(delay);
+        return this.parseWithRetry(input, attemptNumber + 1);
+      }
+
+      // All retries exhausted or non-retryable error
+      let clarificationMessage = "Maaf, saya belum dapat memahami pesan Anda. Coba tulis seperti: 'Beli kopi 25 ribu' atau 'Gajian 5 juta'.";
       
-      // Fallback to UNKNOWN intent
+      if (is503) {
+        clarificationMessage = "⏳ AI assistant sedang sibuk (high demand). Coba lagi dalam beberapa saat atau gunakan format: 'Beli kopi 25 ribu'.";
+      } else if (is429) {
+        clarificationMessage = "⏳ Terlalu banyak request. Tunggu sebentar dan coba lagi.";
+      }
+
       return {
         actions: [{
           intent: "UNKNOWN",
           reason: "AI_PARSE_ERROR",
-          clarificationQuestion: "[DEBUG: GEMINI AI PROVIDER] Parse error: " + error.message + "\n\nMaaf, saya belum dapat memahami pesan Anda.",
+          clarificationQuestion: clarificationMessage,
         }],
       };
     }
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private buildSystemPrompt(input: FinancialParserInput): string {
@@ -115,9 +151,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
 
 **Important Rules:**
 1. **Amount Parsing:**
-   - "25rb", "25ribu", "25k" ? 25000
-   - "2.5jt", "2,5juta", "2.5m" ? 2500000
-   - "500", "500000" ? exact number
+   - "25rb", "25ribu", "25k" → 25000
+   - "2.5jt", "2,5juta", "2.5m" → 2500000
+   - "500", "500000" → exact number
 
 2. **Category Matching:**
    - Match to user's existing categories when possible
@@ -125,16 +161,16 @@ export class GeminiAIProvider implements FinancialParserProvider {
    - For budget/expense, use EXPENSE categories only
 
 3. **Natural Language:**
-   - Handle typos: "makn" ? "makan", "transpot" ? "transport"
-   - Handle conversational: "tadi beli kopi 25k" ? EXPENSE
-   - Handle shorthand: "makan 50k" ? EXPENSE for Makanan & Minuman
+   - Handle typos: "makn" → "makan", "transpot" → "transport"
+   - Handle conversational: "tadi beli kopi 25k" → EXPENSE
+   - Handle shorthand: "makan 50k" → EXPENSE for Makanan & Minuman
 
 4. **Multi-action Support:**
-   - "Gaji 5jt untuk makan 2jt transport 1jt" ? [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
+   - "Gaji 5jt untuk makan 2jt transport 1jt" → [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
 
 5. **Balance Query:**
-   - "saldo", "uang saya", "cek saldo" ? BALANCE_QUERY
-   - "uang free", "free cash" ? BALANCE_QUERY (will show free cash)
+   - "saldo", "uang saya", "cek saldo" → BALANCE_QUERY
+   - "uang free", "free cash" → BALANCE_QUERY (will show free cash)
 
 6. **Unknown Handling:**
    - If unclear, return UNKNOWN with clarificationQuestion

@@ -12,7 +12,7 @@ This task list implements the bugfix for budget allocation cash deduction. The w
 
 ## Tasks
 
-- [-] 1. Write bug condition exploration test
+- [x] 1. Write bug condition exploration test
   - **Property 1: Bug Condition** - Budget Allocation Should Reduce Free Cash
   - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
   - **DO NOT attempt to fix the test or the code when it fails**

@@ -351,12 +351,9 @@ export class PatternParserService {
         return null; // Multi-action needs AI batch parsing
       }
 
-      // Phase 2: Match expense verb (Requirement 1.1, 1.2)
+      // Phase 2: Match expense verb (Requirement 1.1, 1.2) - NOW OPTIONAL
       const matchedVerb = findStartingVerb(text, EXPENSE_VERBS);
-      
-      if (!matchedVerb) {
-        return null; // Not an expense command
-      }
+      const hasVerb = matchedVerb !== null;
 
       // Phase 3: Detect ambiguous modifiers (Requirement 5.3)
       if (hasAmbiguousModifiers(text)) {
@@ -381,11 +378,34 @@ export class PatternParserService {
         return null; // Invalid amount
       }
 
-      // Phase 6: Extract description between verb and amount (Requirement 1.3)
-      const description = extractBetweenVerbAndAmount(text, matchedVerb, amountText);
+      // Phase 6: Extract description (NEW: supports verbless commands)
+      let description: string;
 
-      if (!description || description.length === 0) {
-        return null; // Description required for expense
+      if (hasVerb) {
+        // Verb-based command: extract between verb and amount
+        description = extractBetweenVerbAndAmount(text, matchedVerb!, amountText);
+        
+        if (!description || description.length === 0) {
+          return null; // Description required for verb-based expense
+        }
+      } else {
+        // Verbless command: check if this is income/budget first
+        const isIncome = findStartingVerb(text, INCOME_VERBS) !== null;
+        const isBudget = BUDGET_PREFIXES.some(prefix => 
+          text.toLowerCase().startsWith(prefix)
+        );
+        
+        if (isIncome || isBudget) {
+          return null; // Not an expense, let other parsers handle it
+        }
+        
+        // Extract description as text before amount
+        const amountIndex = text.indexOf(amountText);
+        description = text.substring(0, amountIndex).trim();
+        
+        if (!description || description.length === 0) {
+          return null; // No description means invalid verbless command
+        }
       }
 
       // Phase 7: Extract optional account hint (Requirement 1.5)

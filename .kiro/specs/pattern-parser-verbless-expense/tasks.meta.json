@@ -1,0 +1,32 @@
+{
+  "tasks": [
+    {
+      "id": "1",
+      "type": "pbt",
+      "propertyNumber": 1,
+      "propertyType": "Bug Condition",
+      "status": "not_run"
+    },
+    {
+      "id": "2",
+      "type": "pbt",
+      "propertyNumber": 2,
+      "propertyType": "Preservation",
+      "status": "not_run"
+    },
+    {
+      "id": "3.2",
+      "type": "pbt",
+      "propertyNumber": 1,
+      "propertyType": "Expected Behavior",
+      "status": "not_run"
+    },
+    {
+      "id": "3.3",
+      "type": "pbt",
+      "propertyNumber": 2,
+      "propertyType": "Preservation",
+      "status": "not_run"
+    }
+  ]
+}

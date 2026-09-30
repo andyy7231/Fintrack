@@ -1,0 +1,115 @@
+# Implementation Plan
+
+- [~] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Balance Query Pattern Recognition Failure
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples demonstrating balance queries return NO_MATCH instead of BALANCE_QUERY intent
+  - **Scoped PBT Approach**: Scope the property to concrete balance query messages that currently fail
+  - Test that balance queries like "cek sisa uang saya", "saldo BCA", "uang free saya" return NO_MATCH on unfixed code
+  - Verify pattern parser forces AI fallback for all balance queries
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - "cek sisa uang saya" returns NO_MATCH instead of BALANCE_QUERY
+    - "saldo BCA" returns NO_MATCH instead of BALANCE_QUERY with accountHint="BCA"
+    - "uang free saya" returns NO_MATCH instead of BALANCE_QUERY with isFreeCash=true
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [~] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Pattern Matching Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-balance queries:
+    - Expense commands: "beli kopi 25rb" returns EXPENSE intent
+    - Income commands: "gaji 10jt" returns INCOME intent
+    - Budget commands: "budget makan 1jt" returns BUDGET_ALLOCATION intent
+    - Multi-action messages: "beli kopi 25rb dan makan 50rb" returns NO_MATCH
+    - Ambiguous modifiers: "kemarin kayaknya habis 50rb" returns NO_MATCH
+    - Malicious inputs: SQL injection patterns return INVALID_FORMAT
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10_
+
+- [ ] 3. Fix for balance query pattern parser support
+
+  - [~] 3.1 Add BALANCE_QUERY to PatternParsedIntent type definition
+    - Update `PatternParsedIntent` interface in `pattern-parser.service.ts`
+    - Add 'BALANCE_QUERY' to intent type union: `intent: 'EXPENSE' | 'INCOME' | 'BUDGET_ALLOCATION' | 'BALANCE_QUERY'`
+    - Add optional `isFreeCash?: boolean` field for balance query intents
+    - Ensure backward compatibility by making new fields optional
+    - Update JSDoc comments to document BALANCE_QUERY intent
+    - Specify that BALANCE_QUERY does not require amount or transaction date fields
+    - Document that accountHint and isFreeCash are the key fields for balance queries
+    - _Bug_Condition: isBugCondition(input) where isBalanceQuery(input.toLowerCase()) AND patternParserReturns(NO_MATCH)_
+    - _Expected_Behavior: Pattern parser SHALL return BALANCE_QUERY intent with accountHint and isFreeCash flags_
+    - _Preservation: All existing pattern matching behavior (expense, income, budget) must remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [~] 3.2 Import balance query detection functions from provider.ts
+    - Add import statement: `import { isBalanceQuery, isFreeCashQuery } from './provider'`
+    - Use these functions in parseBalanceQuery() for consistency with AI parser
+    - Maintain single source of truth for balance query keyword detection
+    - _Bug_Condition: Pattern parser lacks balance query detection logic_
+    - _Expected_Behavior: Reuse existing detection functions for consistency_
+    - _Preservation: Existing isBalanceQuery() and isFreeCashQuery() functions remain unchanged_
+    - _Requirements: 2.1, 2.2, 2.3, 3.10_
+
+  - [~] 3.3 Create parseBalanceQuery() private method
+    - Implement pattern matching for balance query keywords using isBalanceQuery()
+    - Detect free cash query vs total balance query using isFreeCashQuery()
+    - Extract accountHint using existing extractAccountHint() helper
+    - Return PatternParsedIntent with intent='BALANCE_QUERY' or null if no match
+    - Handle errors gracefully by catching exceptions and returning null
+    - Set amount to 0 (not applicable for balance queries)
+    - Set description to "Balance Query"
+    - Set transactionDate to current Jakarta date for consistency
+    - _Bug_Condition: No parseBalanceQuery() method exists in pattern parser_
+    - _Expected_Behavior: parseBalanceQuery() returns BALANCE_QUERY intent for balance queries_
+    - _Preservation: Method returns null for non-balance queries, allowing other parsers to handle them_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+  - [~] 3.4 Integrate parseBalanceQuery() into attemptPatternParse() flow
+    - Add balance query check AFTER budget allocation check and BEFORE "No pattern matched" return
+    - Maintain execution order: expense → income → budget → **balance** → NO_MATCH
+    - Return PatternParseResult with success=true, intent=balanceResult, parseMethod='PATTERN'
+    - Ensure security validation and multi-action detection run before balance query check
+    - Include processingTimeMs in result for performance monitoring
+    - _Bug_Condition: Balance queries reach NO_MATCH return statement_
+    - _Expected_Behavior: Balance queries return BALANCE_QUERY intent before NO_MATCH_
+    - _Preservation: Existing parsers run in same order, NO_MATCH behavior unchanged for non-balance queries_
+    - _Requirements: 2.5, 2.6, 3.9_
+
+  - [~] 3.5 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Balance Query Pattern Recognition Success
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify "cek sisa uang saya" returns BALANCE_QUERY intent with accountHint=null, isFreeCash=false
+    - Verify "saldo BCA" returns BALANCE_QUERY intent with accountHint="BCA", isFreeCash=false
+    - Verify "uang free saya" returns BALANCE_QUERY intent with accountHint=null, isFreeCash=true
+    - Verify processingTimeMs < 50 (fast deterministic parsing)
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6_
+
+  - [~] 3.6 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Pattern Matching Behavior Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify expense commands still return EXPENSE intent
+    - Verify income commands still return INCOME intent
+    - Verify budget commands still return BUDGET_ALLOCATION intent
+    - Verify multi-action detection still returns NO_MATCH
+    - Verify ambiguous modifier detection still returns NO_MATCH
+    - Verify security validation still returns INVALID_FORMAT
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10_
+
+- [~] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

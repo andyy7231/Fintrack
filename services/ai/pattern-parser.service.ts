@@ -63,6 +63,7 @@ import {
   normalizeText,
   isSafeInput,
 } from './regex.utils';
+import { isBalanceQuery, isFreeCashQuery, inferAccountHint } from './provider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -180,13 +181,14 @@ export type PatternParseAttempt = PatternParseResult | PatternParseFailure;
  * ```
  */
 export interface PatternParsedIntent {
-  intent: 'EXPENSE' | 'INCOME' | 'BUDGET_ALLOCATION';
+  intent: 'EXPENSE' | 'INCOME' | 'BUDGET_ALLOCATION' | 'BALANCE_QUERY';
   amount: number;
   description: string;
   transactionDate: string; // ISO date string YYYY-MM-DD
   accountHint?: string | null;
   categoryHint?: string | null;
   categoryName?: string; // For BUDGET_ALLOCATION only
+  isFreeCash?: boolean; // For BALANCE_QUERY only - true if asking for free cash, false for total balance
 }
 
 // ============================================================================
@@ -310,6 +312,17 @@ export class PatternParserService {
         return {
           success: true,
           intent: budgetResult,
+          parseMethod: 'PATTERN',
+          processingTimeMs: Date.now() - startTime,
+        };
+      }
+
+      // Attempt balance query parsing
+      const balanceResult = this.parseBalanceQuery(trimmedText);
+      if (balanceResult) {
+        return {
+          success: true,
+          intent: balanceResult,
           parseMethod: 'PATTERN',
           processingTimeMs: Date.now() - startTime,
         };
@@ -727,6 +740,52 @@ export class PatternParserService {
     } catch (error) {
       // Log error but don't throw (Requirement 9.1, 9.4)
       console.error('[PatternParser] Error in parseBudgetAllocation:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse balance query command: "cek sisa uang saya", "saldo BCA", "uang free"
+   *
+   * Pattern: <balance_keywords> [<account_name>]
+   *
+   * Examples:
+   * - "cek sisa uang saya" Ã¢â€ â€™ BALANCE_QUERY (total balance, all accounts)
+   * - "saldo BCA" Ã¢â€ â€™ BALANCE_QUERY (total balance, BCA account)
+   * - "uang free" Ã¢â€ â€™ BALANCE_QUERY (free cash, all accounts)
+   * - "berapa saldo Mandiri yang bisa dipakai" Ã¢â€ â€™ BALANCE_QUERY (free cash, Mandiri account)
+   *
+   * @param text - User message text
+   * @returns PatternParsedIntent or null if not a balance query
+   *
+   * Design: Balance query pattern matching for instant response without AI
+   */
+  private static parseBalanceQuery(text: string): PatternParsedIntent | null {
+    try {
+      // Phase 1: Check if this is a balance query using existing detection
+      if (!isBalanceQuery(text)) {
+        return null; // Not a balance query
+      }
+
+      // Phase 2: Detect free cash query vs total balance query
+      const freeCash = isFreeCashQuery(text);
+
+      // Phase 3: Extract optional account hint
+      // For balance queries, use inferAccountHint (simple keyword matching)
+      // instead of extractAccountHint (requires "dari"/"ke" indicators)
+      const accountHint = inferAccountHint(text.toLowerCase());
+
+      // Phase 4: Build intent result
+      return {
+        intent: 'BALANCE_QUERY',
+        amount: 0, // Not applicable for balance queries
+        description: 'Balance Query',
+        transactionDate: getJakartaDateString(), // Current date for consistency
+        accountHint,
+        isFreeCash: freeCash,
+      };
+    } catch (error) {
+      console.error('[PatternParser] Error in parseBalanceQuery:', error);
       return null;
     }
   }

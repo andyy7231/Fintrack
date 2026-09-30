@@ -1,4 +1,4 @@
-﻿import {
+import {
   ParsedFinancialBatch,
   ParsedFinancialIntent,
   financialBatchSchema,
@@ -73,7 +73,7 @@ function inferCategoryHint(lower: string): string {
   return "Lainnya";
 }
 
-function inferAccountHint(lower: string): string | null {
+export function inferAccountHint(lower: string): string | null {
   if (lower.includes("bca")) return "BCA";
   if (lower.includes("mandiri")) return "Mandiri";
   if (lower.includes("bri")) return "BRI";

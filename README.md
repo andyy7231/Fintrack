@@ -101,6 +101,26 @@ Modular monolith — all modules share a single deployment:
                 PostgreSQL
 ```
 
+### WhatsApp Integration
+
+The WhatsApp module features a **hybrid parsing architecture** that optimizes message processing:
+
+- **Pattern Parser**: Deterministic regex-based parsing for simple commands (80%+ of messages)
+  - 70-90% latency reduction (250ms → 25ms average)
+  - Zero API costs for pattern-matched messages
+  - Instant response for common transactions
+
+- **AI Parser**: Google Gemini-based natural language understanding for complex cases
+  - Handles multi-transaction messages
+  - Processes ambiguous or conversational inputs
+  - Graceful fallback when pattern matching fails
+
+📖 **Detailed documentation**: See [HYBRID_PARSER.md](HYBRID_PARSER.md) for:
+- Supported command formats
+- Performance benchmarks
+- Configuration guide
+- Usage examples
+
 ## License
 
 Private — All rights reserved.

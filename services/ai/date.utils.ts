@@ -87,6 +87,27 @@ export function parseIndonesianDate(
     return d;
   }
 
+  // DD/MM or DD/MM/YYYY format (e.g., "20/01" or "20/01/2024")
+  // Check this BEFORE day names and tanggal pattern to prioritize explicit dates
+  const slashDateMatch = text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  if (slashDateMatch && slashDateMatch[1] && slashDateMatch[2]) {
+    const day = parseInt(slashDateMatch[1], 10);
+    const month = parseInt(slashDateMatch[2], 10);
+    let year = curYear;
+    
+    if (slashDateMatch[3]) {
+      year = parseInt(slashDateMatch[3], 10);
+      // Convert 2-digit year to 4-digit (e.g., 24 → 2024)
+      if (year < 100) {
+        year += 2000;
+      }
+    }
+    
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12) {
+      return jakartaDateToUtc(year, month, day);
+    }
+  }
+
   // Day names (e.g., "Senin", "Senin kemarin", "Selasa", dll)
   const dayMap: Record<string, number> = {
     minggu: 0,
@@ -112,11 +133,12 @@ export function parseIndonesianDate(
     }
   }
 
-  // Specific date, e.g. "tanggal 20" or "20 September"
-  const dateMatch = text.match(/(?:tanggal\s*)?(\d{1,2})(?:\s+([a-z]+))?/i);
-  if (dateMatch && dateMatch[1]) {
-    const day = parseInt(dateMatch[1], 10);
-    const monthName = dateMatch[2]?.toLowerCase();
+  // Specific date with month name, e.g. "20 September" or "tanggal 20 Januari"
+  // More specific pattern to avoid matching amounts like "25rb"
+  const dateWithMonthMatch = text.match(/(?:tanggal\s+)?(\d{1,2})\s+(januari|februari|maret|april|mei|juni|juli|agustus|september|oktober|november|desember|jan|feb|mar|apr|may|jun|jul|agu|ags|sep|okt|nov|des)/i);
+  if (dateWithMonthMatch && dateWithMonthMatch[1] && dateWithMonthMatch[2]) {
+    const day = parseInt(dateWithMonthMatch[1], 10);
+    const monthName = dateWithMonthMatch[2].toLowerCase();
 
     const monthMap: Record<string, number> = {
       januari: 1, jan: 1,
@@ -133,8 +155,8 @@ export function parseIndonesianDate(
       desember: 12, des: 12,
     };
 
-    const targetMonth = monthName && monthMap[monthName] ? monthMap[monthName] : curMonth;
-    if (day >= 1 && day <= 31) {
+    const targetMonth = monthMap[monthName];
+    if (targetMonth && day >= 1 && day <= 31) {
       return jakartaDateToUtc(curYear, targetMonth, day);
     }
   }

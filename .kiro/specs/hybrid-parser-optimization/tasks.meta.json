@@ -1,0 +1,512 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create regex utilities module for pattern matching": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774960778
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774987124
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790776407037
+      }
+    ],
+    "1.2 Extend amount normalization utilities": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774960890
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774987737
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790776407460
+      }
+    ],
+    "1.3 Extend date extraction utilities": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961044
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774988793
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790776408506
+      }
+    ],
+    "2.1 Create Pattern Parser Service core structure": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961131
+      },
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790776435442
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790777259475
+      }
+    ],
+    "2.2 Implement expense pattern parsing": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961269
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790777267508
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790780976056
+      }
+    ],
+    "2.3 Implement income pattern parsing": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961356
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790777268137
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790781481573
+      }
+    ],
+    "2.4 Implement budget allocation pattern parsing": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961502
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790777269885
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782029555
+      }
+    ],
+    "2.5 Implement pattern parser error handling": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961581
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782043192
+      },
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782654025
+      }
+    ],
+    "3. Checkpoint - Ensure Pattern Parser tests pass": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961729
+      },
+      {
+        "executionId": "3731814f-ac86-49da-aa89-f1897c776b42",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782791047
+      },
+      {
+        "executionId": "3731814f-ac86-49da-aa89-f1897c776b42",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782859470
+      }
+    ],
+    "4.1 Create Hybrid Parser Service core structure": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961809
+      },
+      {
+        "executionId": "59100cac-4046-4790-a45b-d764880a0fd6",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783240855
+      },
+      {
+        "executionId": "59100cac-4046-4790-a45b-d764880a0fd6",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783345665
+      }
+    ],
+    "4.2 Implement pattern-first routing logic": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774961888
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783582457
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784099633
+      }
+    ],
+    "4.3 Implement entity resolution for pattern intents": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962031
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783583530
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784100015
+      }
+    ],
+    "4.4 Implement graceful AI fallback error handling": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962111
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783584525
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784100545
+      }
+    ],
+    "4.5 Implement metrics collection methods": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962196
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790783585453
+      },
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784101450
+      }
+    ],
+    "5. Checkpoint - Ensure Hybrid Parser tests pass": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962287
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784353123
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784384340
+      }
+    ],
+    "6.1 Add feature flag support to Message Service": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962426
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784385518
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784649452
+      }
+    ],
+    "6.2 Integrate Hybrid Parser into message processing pipeline": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962502
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784386540
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784650424
+      }
+    ],
+    "7.1 Create Parse Metrics Service": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962580
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784678584
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784947928
+      }
+    ],
+    "7.2 Integrate metrics logging into Hybrid Parser": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962669
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784954142
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790786093721
+      }
+    ],
+    "7.3 Integrate metrics logging into Message Service": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962846
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784954336
+      },
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790786094359
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787492490
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787501618
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787502205
+      }
+    ],
+    "9. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774962935
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787492678
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787513246
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787623039
+      }
+    ],
+    "10.1 Add inline code documentation": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774963024
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787492779
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787628899
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788404422
+      }
+    ],
+    "10.2 Create deployment guide": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774963194
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787492880
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787629742
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788540915
+      }
+    ],
+    "10.3 Update README or documentation with hybrid parser feature": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774963271
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787492980
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787630479
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788405410
+      }
+    ],
+    "11. Final checkpoint - Production readiness validation": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790774963351
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790787493088
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788547590
+      },
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788593282
+      }
+    ],
+    "1. Create utility functions and base infrastructure": [
+      {
+        "executionId": "d438e0f8-f4be-48bc-8689-a87ec8814c4d",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790776408632
+      }
+    ],
+    "2. Implement Pattern Parser Service": [
+      {
+        "executionId": "a74b8867-4fda-4feb-97e9-5687e979aa05",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790782654341
+      }
+    ],
+    "4. Implement Hybrid Parser Orchestrator": [
+      {
+        "executionId": "15edf127-5312-4a5a-a198-9232d8761904",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784101650
+      }
+    ],
+    "6. Integrate with Message Service": [
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790784650560
+      }
+    ],
+    "7. Implement observability and metrics collection": [
+      {
+        "executionId": "a99d3e83-6ae8-45d6-833e-ff4eb8055895",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790786094465
+      }
+    ],
+    "10. Add documentation and deployment preparation": [
+      {
+        "executionId": "310c7e39-d410-4469-9c06-5f3255ba01eb",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790788541054
+      }
+    ]
+  }
+}

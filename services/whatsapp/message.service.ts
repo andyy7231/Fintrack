@@ -6,6 +6,7 @@ import { UserMappingService } from "./user-mapping.service";
 import { WhatsAppVerificationService } from "./verification.service";
 import { PendingActionService } from "./pending-action.service";
 import { FinancialParserService } from "@/services/ai/parser.service";
+import { HybridParserService } from "@/services/ai/hybrid-parser.service";
 import { IWhatsAppClient, whatsAppClient } from "./client";
 import { BudgetQueryService } from "./budget-query.service";
 import { SalaryAllocationService } from "./salary-allocation.service";
@@ -31,7 +32,11 @@ export class WhatsAppMessageService {
     client: IWhatsAppClient = whatsAppClient,
     parserService?: FinancialParserService
   ): Promise<ProcessedWhatsAppMessage> {
-    const parser = parserService || new FinancialParserService();
+    const parser = parserService || (
+      process.env.ENABLE_PATTERN_PARSER === 'true'
+        ? new HybridParserService()
+        : new FinancialParserService()
+    );
 
     // Step 1: Idempotency insert into whatsapp_messages table
     const [inserted] = await db
@@ -222,7 +227,8 @@ export class WhatsAppMessageService {
               // Step 5: Natural Language Financial Parser
               const parseResult = await parser.processFinancialText(
                 trimmedText,
-                mapping.userId
+                mapping.userId,
+                message.normalizedPhoneNumber
               );
 
               if (parseResult.status === "READY_FOR_CONFIRMATION") {

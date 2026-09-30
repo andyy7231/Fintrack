@@ -1,0 +1,8 @@
+﻿# Create .vercelignore to exclude test files from deployment
+tests/
+vitest.config.ts
+**/*.test.ts
+**/*.spec.ts
+**/*.test.js
+**/*.spec.js
+.kiro/

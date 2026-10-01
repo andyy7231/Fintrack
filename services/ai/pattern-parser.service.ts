@@ -63,7 +63,7 @@ import {
   normalizeText,
   isSafeInput,
 } from './regex.utils';
-import { isBalanceQuery, isFreeCashQuery, inferAccountHint } from './provider';
+import { isBalanceQuery, isFreeCashQuery, inferAccountHint, inferCategoryHint } from './provider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -398,8 +398,10 @@ export class PatternParserService {
         // Verb-based command: extract between verb and amount
         description = extractBetweenVerbAndAmount(text, matchedVerb!, amountText);
         
+        // If no description between verb and amount, use the verb itself
+        // Example: "belanja 100k" → description = "belanja"
         if (!description || description.length === 0) {
-          return null; // Description required for verb-based expense
+          description = matchedVerb!;
         }
       } else {
         // Verbless command: check if this is income/budget first
@@ -425,7 +427,13 @@ export class PatternParserService {
       const accountHint = extractAccountHint(text);
 
       // Phase 8: Extract optional category hint (Requirement 1.6)
-      const categoryHint = extractCategoryHint(text);
+      // Try explicit "kategori" keyword first, fallback to automatic inference
+      let categoryHint = extractCategoryHint(text);
+
+      if (categoryHint === null) {
+        // No explicit category keyword found, attempt automatic inference
+        categoryHint = inferCategoryHint(text.toLowerCase());
+      }
 
       // Phase 9: Extract transaction date (Requirement 6.1, 6.2, 6.3)
       const lowerText = text.toLowerCase();

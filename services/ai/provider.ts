@@ -23,7 +23,7 @@ export interface FinancialParserProvider {
 // Category / account hint helpers (shared by MockAIProvider)
 // ─────────────────────────────────────────────────────────────
 
-function inferCategoryHint(lower: string): string {
+export function inferCategoryHint(lower: string): string {
   if (
     lower.includes("sayur") || lower.includes("ikan") || lower.includes("daging") ||
     lower.includes("ayam") || lower.includes("beras") || lower.includes("telur") ||

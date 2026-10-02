@@ -24,6 +24,18 @@ export interface FinancialParserProvider {
 // ─────────────────────────────────────────────────────────────
 
 export function inferCategoryHint(lower: string): string {
+  // Pendidikan - expanded from 5 to 18 keywords (MOVED BEFORE Makanan to fix "fotokopi" false positive)
+  if (
+    lower.includes("buku") || lower.includes("fotocopy") || lower.includes("kursus") ||
+    lower.includes("les ") || lower.includes("spp") ||
+    lower.includes("kuliah") || lower.includes("kampus") || lower.includes("semester") ||
+    lower.includes("uang gedung") || lower.includes("seragam") ||
+    lower.includes("alat tulis") || lower.includes("atk") ||
+    lower.includes("printer") || lower.includes("print ") || lower.includes("cetak") ||
+    lower.includes("jilid") || lower.includes("skripsi") || lower.includes("fotokopi")
+  ) return "Pendidikan";
+
+  // Makanan & Minuman - expanded from 22 to 42 keywords
   if (
     lower.includes("sayur") || lower.includes("ikan") || lower.includes("daging") ||
     lower.includes("ayam") || lower.includes("beras") || lower.includes("telur") ||
@@ -31,46 +43,94 @@ export function inferCategoryHint(lower: string): string {
     lower.includes("mie") || lower.includes("bakso") || lower.includes("sate") ||
     lower.includes("snack") || lower.includes("jajan") || lower.includes("kopi") ||
     lower.includes("makan") || lower.includes("minum") || lower.includes("resto") ||
-    lower.includes("nasi") || lower.includes("warteg") || lower.includes("sarapan")
+    lower.includes("nasi") || lower.includes("warteg") || lower.includes("sarapan") ||
+    lower.includes("teh") || lower.includes(" es ") || lower.includes("gorengan") ||
+    lower.includes("martabak") || lower.includes("soto") || lower.includes("gado-gado") ||
+    lower.includes("gado gado") || lower.includes("rendang") || lower.includes("pecel") ||
+    lower.includes("ngemil") || lower.includes("cemilan") || lower.includes("kantin") ||
+    lower.includes("catering") || lower.includes("delivery makanan") || 
+    lower.includes("pesan makanan") || lower.includes("pesan makan") || 
+    lower.includes("gofood") || lower.includes("go food") || lower.includes("grabfood") ||
+    lower.includes("makan siang") || lower.includes("makan malam")
   ) return "Makanan & Minuman";
 
+  // Tempat Tinggal - NEW CATEGORY
+  if (
+    lower.includes("kos ") || lower.includes("kost ") || lower.includes(" kos") || lower.includes(" kost") ||
+    lower.includes("bayar kos") || lower.includes("bayar kost") ||
+    lower.includes("kontrakan") || lower.includes("sewa rumah") ||
+    lower.includes("sewa kos") || lower.includes("sewa kost") ||
+    lower.includes("rumah kontrakan")
+  ) return "Tempat Tinggal";
+
+  // Transportasi - expanded from 12 to 27 keywords
   if (
     lower.includes("bensin") || lower.includes("pertalite") || lower.includes("pertamax") ||
     lower.includes("solar") || lower.includes("ojek") || lower.includes("grab") ||
     lower.includes("gojek") || lower.includes("maxim") || lower.includes("tol") ||
-    lower.includes("parkir") || lower.includes("tambal ban") || lower.includes("servis")
+    lower.includes("parkir") || lower.includes("tambal ban") || lower.includes("servis") ||
+    lower.includes(" motor") || lower.includes("motor ") ||
+    lower.includes(" mobil") || lower.includes("mobil ") ||
+    lower.includes(" bus") || lower.includes("bus ") ||
+    lower.includes("kereta") || lower.includes("mrt") || lower.includes("krl") ||
+    lower.includes("angkot") || lower.includes("taksi") || lower.includes("taxi") ||
+    lower.includes("uber") || lower.includes("cuci motor") || lower.includes("cuci mobil") ||
+    lower.includes("isi angin") || lower.includes("servis motor") || lower.includes("servis mobil")
   ) return "Transportasi";
 
+  // Tagihan & Utilitas - expanded from 12 to 22 phrases
   if (
     lower.includes("paketan") || lower.includes("paket data") || lower.includes("kuota") ||
     lower.includes("pulsa") || lower.includes("listrik") || lower.includes("token") ||
     lower.includes("pdam") || lower.includes("wifi") || lower.includes("indihome") ||
-    lower.includes("internet") || lower.includes("bpjs") || lower.includes("iuran")
+    lower.includes("internet") || lower.includes("bpjs") || lower.includes("iuran") ||
+    lower.includes("bayar air") || lower.includes("tagihan air") || 
+    lower.includes("air pdam") || lower.includes("galon") ||
+    lower.includes("gas lpg") || lower.includes("beli gas") || lower.includes("isi gas") ||
+    lower.includes("telepon") || lower.includes("pln") ||
+    lower.includes("tagihan listrik") || lower.includes("bayar listrik") ||
+    lower.includes("bayar wifi") || lower.includes("bayar internet") || lower.includes("bayar pulsa")
   ) return "Tagihan & Utilitas";
 
+  // Belanja - expanded from 11 to 28 keywords
   if (
     lower.includes("belanja") || lower.includes("shopee") || lower.includes("tokopedia") ||
     lower.includes("tiktok shop") || lower.includes("baju") || lower.includes("celana") ||
     lower.includes("sepatu") || lower.includes("sabun") || lower.includes("odol") ||
-    lower.includes("indomaret") || lower.includes("alfamart")
+    lower.includes("indomaret") || lower.includes("alfamart") ||
+    lower.includes("lazada") || lower.includes("blibli") || lower.includes("bukalapak") ||
+    lower.includes("jd.id") || lower.includes(" tas") || lower.includes("tas ") ||
+    lower.includes("jam tangan") || lower.includes("kaos kaki") ||
+    lower.includes("sampo") || lower.includes("shampoo") || lower.includes("deterjen") ||
+    lower.includes("detergen") || lower.includes("tisu") || lower.includes("tissue") ||
+    lower.includes("supermarket") || lower.includes("superindo") || lower.includes("giant") ||
+    lower.includes("carrefour") || lower.includes("minimarket")
   ) return "Belanja";
 
+  // Kesehatan - expanded from 6 to 16 keywords
   if (
     lower.includes("obat") || lower.includes("dokter") || lower.includes("apotek") ||
-    lower.includes("vitamin") || lower.includes("klinik") || lower.includes("paracetamol")
+    lower.includes("vitamin") || lower.includes("klinik") || lower.includes("paracetamol") ||
+    lower.includes("rumah sakit") || lower.includes(" rs ") || lower.includes("puskesmas") ||
+    lower.includes("cek lab") || lower.includes("laboratorium") ||
+    lower.includes("rontgen") || lower.includes("tes kesehatan") || lower.includes("tes covid") ||
+    lower.includes("imunisasi") || lower.includes("susu formula") || lower.includes("popok")
   ) return "Kesehatan";
 
+  // Hiburan - expanded from 6 to 18 keywords
   if (
     lower.includes("nonton") || lower.includes("bioskop") || lower.includes("game") ||
-    lower.includes("steam") || lower.includes("netflix") || lower.includes("spotify")
+    lower.includes("steam") || lower.includes("netflix") || lower.includes("spotify") ||
+    lower.includes("youtube premium") || lower.includes("disney+") || lower.includes("disney plus") ||
+    lower.includes("hbo") || lower.includes("hbo max") || lower.includes("viu") ||
+    lower.includes("playstation") || lower.includes("ps5") || lower.includes("ps4") ||
+    lower.includes("nintendo") || lower.includes("switch") || lower.includes("xbox") ||
+    lower.includes("console") || lower.includes("tiket konser") || lower.includes("konser") ||
+    lower.includes("wisata") || lower.includes("liburan") || lower.includes("karaoke")
   ) return "Hiburan";
 
-  if (
-    lower.includes("buku") || lower.includes("fotocopy") || lower.includes("kursus") ||
-    lower.includes("les") || lower.includes("spp")
-  ) return "Pendidikan";
-
-  return "Lainnya";
+  // FIXED: Fallback to "Pengeluaran Lain" instead of "Lainnya"
+  return "Pengeluaran Lain";
 }
 
 export function inferAccountHint(lower: string): string | null {
@@ -134,7 +194,9 @@ export function isBalanceQuery(text: string): boolean {
  */
 export function isFreeCashQuery(text: string): boolean {
   const lower = text.toLowerCase().trim();
-  return (
+  
+  // Explicit Free Cash keywords
+  if (
     lower.includes("uang free") ||
     lower.includes("free cash") ||
     lower.includes("uang bebas") ||
@@ -144,7 +206,32 @@ export function isFreeCashQuery(text: string): boolean {
     lower.includes("uang yang bisa") ||
     (lower.includes("sisa") && lower.includes("free")) ||
     (lower.includes("berapa") && lower.includes("free"))
-  );
+  ) {
+    return true;
+  }
+  
+  // DEFAULT: "sisa uang" queries return Free Cash (unallocated money)
+  // Per spec requirement: "berapa sisa uang saya" should return Free Cash, not Actual Balance
+  if (
+    lower.includes("sisa uang") ||
+    lower.includes("sisa duit") ||
+    lower.includes("uang sisa")
+  ) {
+    return true;
+  }
+  
+  // Only return Total Balance if user explicitly asks for "total" or "keseluruhan"
+  if (
+    lower.includes("total") ||
+    lower.includes("keseluruhan") ||
+    lower.includes("semua saldo") ||
+    lower.includes("jumlah seluruh")
+  ) {
+    return false;
+  }
+  
+  // Default balance queries return Free Cash (safer default for budgeting)
+  return true;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -312,9 +399,9 @@ export class MockAIProvider implements FinancialParserProvider {
       const amount = amountMatch ? parseIndonesianAmount(amountMatch[0]) : null;
       if (!amount) return { intent: "UNKNOWN", reason: "MISSING_AMOUNT", clarificationQuestion: "Berapa nominal pemasukan yang diterima?" };
       let categoryHint = "Gaji";
-      if (lower.includes("freelance")) categoryHint = "Freelance / Side Job";
-      else if (lower.includes("bonus")) categoryHint = "Bonus & Hadiah";
-      else if (lower.includes("penjualan")) categoryHint = "Penjualan";
+      if (lower.includes("freelance")) categoryHint = "Freelance";
+      else if (lower.includes("bonus")) categoryHint = "Bonus";
+      else if (lower.includes("penjualan") || lower.includes("jualan") || lower.includes("bisnis")) categoryHint = "Bisnis";
       let desc = text;
       if (amountMatch) desc = desc.replace(amountMatch[0], "");
       desc = desc

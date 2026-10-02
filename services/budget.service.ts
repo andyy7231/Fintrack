@@ -13,7 +13,7 @@
 
 import { db } from "@/lib/db";
 import { budgets, categories, transactions } from "@/db/schema";
-import { eq, and, or, isNull, gte, lt, sql } from "drizzle-orm";
+import { eq, and, or, isNull, gte, lt, lte, gt, sql } from "drizzle-orm";
 import {
   CreateBudgetInput,
   UpdateBudgetInput,
@@ -231,6 +231,186 @@ function calculateProgress(
 // ─── Service ───────────────────────────────────────────────────────────────────
 
 export class BudgetService {
+  // ──────────────────────────────────────────────────────────────────────────────
+  // BUDGET MATCHING AND VALIDATION (for expense creation)
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Find active applicable budget for an expense transaction.
+   * Returns budget if found, null if no matching budget.
+   * 
+   * Matches on:
+   * - userId
+   * - accountId
+   * - categoryId
+   * - transactionDate within [startDate, endDate)
+   */
+  static async findApplicableBudget(
+    userId: string,
+    accountId: string,
+    categoryId: string,
+    transactionDate: Date
+  ): Promise<{
+    id: string;
+    amount: string;
+    spentAmount: number;
+    remaining: number;
+  } | null> {
+    // 1. Find matching budget
+    const [budget] = await db
+      .select()
+      .from(budgets)
+      .where(
+        and(
+          eq(budgets.userId, userId),
+          eq(budgets.accountId, accountId),
+          eq(budgets.categoryId, categoryId),
+          lte(budgets.startDate, transactionDate),
+          gt(budgets.endDate, transactionDate) // exclusive upper bound
+        )
+      )
+      .limit(1);
+
+    if (!budget) return null;
+
+    // 2. Calculate spent amount
+    const spentAmount = await aggregateSpending(
+      userId,
+      categoryId,
+      budget.startDate,
+      budget.endDate
+    );
+
+    const limitAmount = parseFloat(budget.amount);
+    const remaining = limitAmount - spentAmount;
+
+    return {
+      id: budget.id,
+      amount: budget.amount,
+      spentAmount,
+      remaining,
+    };
+  }
+
+  /**
+   * Validate budget consumption for an expense.
+   * Returns validation result indicating:
+   * - Can expense proceed?
+   * - How much from budget?
+   * - How much from free cash?
+   * - Any warnings?
+   */
+  static async validateBudgetConsumption(
+    userId: string,
+    accountId: string,
+    categoryId: string | null,
+    expenseAmount: number,
+    transactionDate: Date
+  ): Promise<{
+    canProceed: boolean;
+    budgetConsumption: number;
+    freeCashConsumption: number;
+    warnings: string[];
+    budgetId?: string;
+  }> {
+    const warnings: string[] = [];
+
+    // If no category, use free cash only
+    if (!categoryId) {
+      const { AccountService } = await import("./account.service");
+      const freeCash = await AccountService.getFreeCash(userId, accountId);
+
+      if (expenseAmount > freeCash) {
+        return {
+          canProceed: false,
+          budgetConsumption: 0,
+          freeCashConsumption: 0,
+          warnings: [
+            `Free cash tidak mencukupi. Tersedia: Rp${freeCash.toLocaleString()}, Dibutuhkan: Rp${expenseAmount.toLocaleString()}`
+          ],
+        };
+      }
+
+      return {
+        canProceed: true,
+        budgetConsumption: 0,
+        freeCashConsumption: expenseAmount,
+        warnings: [],
+      };
+    }
+
+    // Try to find applicable budget
+    const budget = await this.findApplicableBudget(
+      userId,
+      accountId,
+      categoryId,
+      transactionDate
+    );
+
+    // No budget found - use free cash
+    if (!budget) {
+      const { AccountService } = await import("./account.service");
+      const freeCash = await AccountService.getFreeCash(userId, accountId);
+
+      if (expenseAmount > freeCash) {
+        return {
+          canProceed: false,
+          budgetConsumption: 0,
+          freeCashConsumption: 0,
+          warnings: [
+            `Free cash tidak mencukupi (tidak ada budget untuk kategori ini). Tersedia: Rp${freeCash.toLocaleString()}, Dibutuhkan: Rp${expenseAmount.toLocaleString()}`
+          ],
+        };
+      }
+
+      return {
+        canProceed: true,
+        budgetConsumption: 0,
+        freeCashConsumption: expenseAmount,
+        warnings: [],
+      };
+    }
+
+    // Budget found - check if it covers the expense
+    if (expenseAmount <= budget.remaining) {
+      // Budget covers entire expense
+      return {
+        canProceed: true,
+        budgetConsumption: expenseAmount,
+        freeCashConsumption: 0,
+        warnings: [],
+        budgetId: budget.id,
+      };
+    }
+
+    // Overspending - budget + free cash
+    const overage = expenseAmount - budget.remaining;
+    const { AccountService } = await import("./account.service");
+    const freeCash = await AccountService.getFreeCash(userId, accountId);
+
+    if (overage > freeCash) {
+      return {
+        canProceed: false,
+        budgetConsumption: 0,
+        freeCashConsumption: 0,
+        warnings: [
+          `Budget tersisa Rp${budget.remaining.toLocaleString()}, overage Rp${overage.toLocaleString()} melebihi free cash Rp${freeCash.toLocaleString()}`
+        ],
+      };
+    }
+
+    warnings.push(
+      `⚠️ Budget melebihi sisa! Budget tersisa: Rp${budget.remaining.toLocaleString()}, Expense: Rp${expenseAmount.toLocaleString()}. Overage Rp${overage.toLocaleString()} akan dikurangi dari free cash.`
+    );
+
+    return {
+      canProceed: true,
+      budgetConsumption: budget.remaining,
+      freeCashConsumption: overage,
+      warnings,
+      budgetId: budget.id,
+    };
+  }
   // ──────────────────────────────────────────────────────────────────────────────
   // CREATE
   // ──────────────────────────────────────────────────────────────────────────────

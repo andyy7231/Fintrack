@@ -58,7 +58,29 @@ export class TransactionService {
       }
     }
 
-    // 3. Insert transaction
+    // 3. NEW: Budget-aware validation for EXPENSE transactions
+    if (input.type === "EXPENSE") {
+      const { BudgetService } = await import("./budget.service");
+      
+      const validation = await BudgetService.validateBudgetConsumption(
+        userId,
+        input.accountId,
+        input.categoryId || null,
+        parseFloat(input.amount),
+        input.transactionDate
+      );
+
+      if (!validation.canProceed) {
+        throw new Error(validation.warnings.join(". "));
+      }
+
+      // Log warnings if any (overspending, etc.)
+      if (validation.warnings.length > 0) {
+        console.warn(`[Budget Warning] ${validation.warnings.join(". ")}`);
+      }
+    }
+
+    // 4. Insert transaction
     const [created] = await db
       .insert(transactions)
       .values({

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { accounts, transactions, transfers, budgets } from "@/db/schema";
-import { eq, and, sql, lte, gte } from "drizzle-orm";
+import { eq, and, sql, lte, gte, gt } from "drizzle-orm";
 import { CreateAccountInput, UpdateAccountInput } from "@/schemas/account.schema";
 
 export interface AccountWithBalance {
@@ -240,33 +240,45 @@ export class AccountService {
         parseFloat(account.initialBalance)
       );
       
-      // 2. Sum active budget allocations for this account
-      // Active = budget period includes current time (startDate <= now < endDate)
+      // 2. Calculate sum of REMAINING active budget allocations
+      // Free Cash = Actual Balance - Sum(Remaining Budgets), NOT original allocations
       const now = new Date();
-      const [allocationsRes] = await db
-        .select({
-          total: sql<string>`coalesce(sum(${budgets.amount}), '0.00')`,
-        })
+      const activeBudgets = await db
+        .select()
         .from(budgets)
         .where(
           and(
             eq(budgets.userId, userId),
             eq(budgets.accountId, accountId),
-            lte(budgets.startDate, now),  // Budget has started
-            gte(budgets.endDate, now)     // Budget hasn't ended
+            lte(budgets.startDate, now),
+            gt(budgets.endDate, now)
           )
         );
       
-      const totalAllocated = parseFloat(allocationsRes?.total || "0");
+      let totalRemainingAllocated = 0;
       
+      for (const budget of activeBudgets) {
+        const { BudgetService } = await import("./budget.service");
+        const budgetWithSpent = await BudgetService.findApplicableBudget(
+          userId,
+          accountId,
+          budget.categoryId,
+          now
+        );
+        
+        if (budgetWithSpent) {
+          totalRemainingAllocated += Math.max(0, budgetWithSpent.remaining);
+        }
+      }
+
       // 3. Free cash = total balance - allocations
-      const freeCash = totalBalance - totalAllocated;
+      const freeCash = totalBalance - totalRemainingAllocated;
       
       return Math.round(freeCash * 100) / 100;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // HOTFIX: If account_id column doesn't exist in production (migration not run),
-      // fallback to returning total balance as free cash
-      if (error?.message && (error.message.includes('column') || error.message.includes('does not exist'))) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage && (errorMessage.includes('column') || errorMessage.includes('does not exist'))) {
         console.warn('[HOTFIX] account_id column might be missing in budgets table, falling back to total balance');
         
         const [account] = await db

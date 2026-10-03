@@ -1,10 +1,21 @@
-"use client";
+﻿"use client";
 
 import type { BudgetProgressDTO } from "@/services/budget.service";
 import { formatCurrency } from "@/lib/utils";
 
 interface BudgetOverviewProps {
   budgets: BudgetProgressDTO[];
+}
+
+function getPeriodTypeLabel(periodType: string): string {
+  switch (periodType) {
+    case "MONTHLY": return "Bulanan";
+    case "ROLLING_30_DAYS": return "30 Hari";
+    case "ROLLING_7_DAYS": return "7 Hari";
+    case "ROLLING_90_DAYS": return "90 Hari";
+    case "CUSTOM": return "Custom";
+    default: return periodType;
+  }
 }
 
 function BudgetBar({
@@ -67,7 +78,7 @@ export function BudgetOverview({ budgets }: BudgetOverviewProps) {
                 </p>
               </div>
               <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                {b.periodType === "MONTHLY" ? "Bulanan" : "Kustom"}
+                {getPeriodTypeLabel(b.periodType)}
               </p>
             </div>
 

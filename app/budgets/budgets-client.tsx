@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
 import type { BudgetProgressDTO } from "@/services/budget.service";
 
@@ -19,6 +19,8 @@ interface BudgetsClientProps {
   expenseCategories: Category[];
 }
 
+type PeriodType = "MONTHLY" | "ROLLING_7_DAYS" | "ROLLING_30_DAYS" | "ROLLING_90_DAYS" | "CUSTOM";
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function now() {
@@ -30,6 +32,7 @@ function now() {
     month: parseInt(
       d.toLocaleDateString("en-US", { timeZone: "Asia/Jakarta", month: "numeric" })
     ),
+    date: d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }), // YYYY-MM-DD
   };
 }
 
@@ -37,6 +40,40 @@ const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
+
+function getPeriodTypeLabel(periodType: string): string {
+  switch (periodType) {
+    case "MONTHLY": return "Budget Bulanan";
+    case "ROLLING_30_DAYS": return "Budget 30 Hari";
+    case "ROLLING_7_DAYS": return "Budget 7 Hari";
+    case "ROLLING_90_DAYS": return "Budget 90 Hari";
+    case "CUSTOM": return "Budget Custom";
+    default: return periodType;
+  }
+}
+
+function formatIndonesianDate(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const d = new Date(date);
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getRemainingDays(endDate: Date): number {
+  const now = new Date();
+  const diff = endDate.getTime() - now.getTime();
+  const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
+  return Math.max(0, days);
+}
+
+function calculateRollingPeriodPreview(startDate: string | null, durationDays: number): { start: string; end: string } {
+  const start = startDate ? new Date(startDate + "T00:00:00") : new Date();
+  const end = new Date(start.getTime() + durationDays * 24 * 60 * 60 * 1000);
+  
+  return {
+    start: formatIndonesianDate(start),
+    end: formatIndonesianDate(end),
+  };
+}
 
 // ─── Progress bar ───────────────────────────────────────────────────────────────
 
@@ -51,7 +88,6 @@ function ProgressBar({ pct, over }: { pct: number; over: boolean }) {
     </div>
   );
 }
-
 // ─── Budget Card ────────────────────────────────────────────────────────────────
 
 function BudgetCard({
@@ -80,6 +116,10 @@ function BudgetCard({
     });
   };
 
+  const periodLabel = getPeriodTypeLabel(budget.periodType);
+  const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(budget.endDate)}`;
+  const remainingDays = getRemainingDays(budget.endDate);
+
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
       {/* Header */}
@@ -94,9 +134,14 @@ function BudgetCard({
             <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
               {budget.categoryName}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              {budget.periodType === "MONTHLY" ? "Budget Bulanan" : "Budget Kustom"}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+                {periodLabel}
+              </span>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {remainingDays > 0 ? `${remainingDays} hari lagi` : "Berakhir"}
+              </p>
+            </div>
           </div>
         </div>
         <button
@@ -110,6 +155,11 @@ function BudgetCard({
         >
           {isPending ? "..." : confirming ? "Konfirmasi Hapus" : "Hapus"}
         </button>
+      </div>
+
+      {/* Period Range */}
+      <div className="mt-2">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{periodRange}</p>
       </div>
 
       {/* Amounts */}
@@ -159,7 +209,6 @@ function BudgetCard({
     </div>
   );
 }
-
 // ─── Create Budget Form ─────────────────────────────────────────────────────────
 
 function CreateBudgetForm({
@@ -169,26 +218,54 @@ function CreateBudgetForm({
   categories: Category[];
   onCreated: (budget: BudgetProgressDTO) => void;
 }) {
-  const { year: thisYear, month: thisMonth } = now();
+  const { year: thisYear, month: thisMonth, date: today } = now();
 
-  const [periodType, setPeriodType] = useState<"MONTHLY" | "CUSTOM">("MONTHLY");
+  const [periodType, setPeriodType] = useState<PeriodType>("ROLLING_30_DAYS");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [year, setYear] = useState(thisYear);
   const [month, setMonth] = useState(thisMonth);
   const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Calculate preview for rolling periods
+  const periodPreview = useMemo(() => {
+    if (periodType === "ROLLING_7_DAYS") {
+      return calculateRollingPeriodPreview(startDate || null, 7);
+    } else if (periodType === "ROLLING_30_DAYS") {
+      return calculateRollingPeriodPreview(startDate || null, 30);
+    } else if (periodType === "ROLLING_90_DAYS") {
+      return calculateRollingPeriodPreview(startDate || null, 90);
+    }
+    return null;
+  }, [periodType, startDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    const body =
-      periodType === "MONTHLY"
-        ? { periodType, categoryId, amount: parseFloat(amount), year, month }
-        : { periodType, categoryId, amount: parseFloat(amount), startDate, endDate };
+    type RequestBody = 
+      | { periodType: "MONTHLY"; categoryId: string; amount: number; year: number; month: number }
+      | { periodType: "CUSTOM"; categoryId: string; amount: number; startDate: string; endDate: string }
+      | { periodType: "ROLLING_7_DAYS" | "ROLLING_30_DAYS" | "ROLLING_90_DAYS"; categoryId: string; amount: number; startDate?: string };
+    
+    let body: RequestBody;
+    
+    if (periodType === "MONTHLY") {
+      body = { periodType, categoryId, amount: parseFloat(amount), year, month };
+    } else if (periodType === "CUSTOM") {
+      body = { periodType, categoryId, amount: parseFloat(amount), startDate, endDate: customEndDate };
+    } else {
+      // Rolling periods
+      body = { 
+        periodType, 
+        categoryId, 
+        amount: parseFloat(amount),
+        ...(startDate && { startDate }),
+      };
+    }
 
     startTransition(async () => {
       try {
@@ -207,7 +284,7 @@ function CreateBudgetForm({
         onCreated(json.data);
         setAmount("");
         setStartDate("");
-        setEndDate("");
+        setCustomEndDate("");
       } catch {
         setError("Terjadi kesalahan jaringan");
       }
@@ -223,22 +300,31 @@ function CreateBudgetForm({
         + Buat Budget Baru
       </h2>
 
-      {/* Period type toggle */}
-      <div className="mb-4 flex gap-2">
-        {(["MONTHLY", "CUSTOM"] as const).map((t) => (
-          <button
-            type="button"
-            key={t}
-            onClick={() => setPeriodType(t)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              periodType === t
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
-            }`}
-          >
-            {t === "MONTHLY" ? "Bulanan" : "Kustom"}
-          </button>
-        ))}
+      {/* Period type selector */}
+      <div className="mb-4">
+        <label className="mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          Tipe Periode Budget
+        </label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {(["MONTHLY", "ROLLING_7_DAYS", "ROLLING_30_DAYS", "ROLLING_90_DAYS", "CUSTOM"] as const).map((t) => (
+            <button
+              type="button"
+              key={t}
+              onClick={() => setPeriodType(t)}
+              className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                periodType === t
+                  ? "bg-blue-600 text-white"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
+              }`}
+            >
+              {t === "MONTHLY" && "Bulanan"}
+              {t === "ROLLING_7_DAYS" && "7 Hari"}
+              {t === "ROLLING_30_DAYS" && "30 Hari"}
+              {t === "ROLLING_90_DAYS" && "90 Hari"}
+              {t === "CUSTOM" && "Custom"}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -261,7 +347,7 @@ function CreateBudgetForm({
           </select>
         </div>
 
-        {/* Period fields */}
+        {/* Period-specific fields */}
         {periodType === "MONTHLY" ? (
           <>
             <div>
@@ -295,7 +381,7 @@ function CreateBudgetForm({
               />
             </div>
           </>
-        ) : (
+        ) : periodType === "CUSTOM" ? (
           <>
             <div>
               <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -315,13 +401,30 @@ function CreateBudgetForm({
               </label>
               <input
                 type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
                 required
                 className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               />
             </div>
           </>
+        ) : (
+          // Rolling periods
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+              Tanggal Mulai (Opsional)
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              placeholder={today}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            />
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Kosongkan untuk mulai hari ini
+            </p>
+          </div>
         )}
 
         {/* Amount */}
@@ -341,6 +444,16 @@ function CreateBudgetForm({
         </div>
       </div>
 
+      {/* Period Preview */}
+      {periodPreview && (
+        <div className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
+          <strong>Preview Periode:</strong> {periodPreview.start} – {periodPreview.end}
+          {periodType === "ROLLING_7_DAYS" && " (7 hari)"}
+          {periodType === "ROLLING_30_DAYS" && " (30 hari)"}
+          {periodType === "ROLLING_90_DAYS" && " (90 hari)"}
+        </div>
+      )}
+
       {error && (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-400">
           {error}
@@ -357,7 +470,6 @@ function CreateBudgetForm({
     </form>
   );
 }
-
 // ─── Main Client Component ──────────────────────────────────────────────────────
 
 export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClientProps) {
@@ -416,13 +528,13 @@ export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClie
           Budget Aktif ({budgets.length})
         </h2>
         {budgets.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-300 bg-transparent p-8 text-center dark:border-zinc-700">
+          <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Belum ada budget. Buat budget pertama Anda di atas.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid gap-4">
             {budgets.map((b) => (
               <BudgetCard key={b.id} budget={b} onDelete={handleDeleted} />
             ))}

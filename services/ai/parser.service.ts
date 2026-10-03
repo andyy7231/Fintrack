@@ -1,10 +1,11 @@
-﻿import { FinancialParserProvider, MockAIProvider, GeminiAIProvider } from "./provider";
+import { FinancialParserProvider, MockAIProvider, GeminiAIProvider } from "./provider";
 import { ParsedFinancialIntent } from "./schemas";
 import { getJakartaDateString, parseIndonesianDate } from "./date.utils";
 import { formatRupiah } from "./amount.utils";
 import { IntentResolverService } from "./resolver.service";
 import { AccountService } from "@/services/account.service";
 import { CategoryService } from "@/services/category.service";
+import { formatConfirmation, ConfirmationItem } from "@/services/whatsapp/response-formatter.service";
 
 // ─────────────────────────────────────────────────────────────
 // Resolved action payload types
@@ -23,6 +24,11 @@ export interface ResolvedActionPayload {
   toAccountId?: string;
   // BUDGET_ALLOCATION
   budgetCategoryId?: string;
+  // Display-only fields for response formatting (not used in DB mutation)
+  categoryName?: string | null;
+  accountName?: string;
+  fromAccountName?: string;
+  toAccountName?: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -164,10 +170,17 @@ export class FinancialParserService {
           ? summaryLines.join("\n")
           : `📋 *${actionCount} tindakan akan diproses:*\n\n${summaryLines.join("\n\n")}`;
 
-      const confirmationPrompt =
-        actionCount === 1
-          ? `${summaryText}\n\nBalas *YA* untuk memproses atau *BATAL* untuk membatalkan.`
-          : `${summaryText}\n\nSemua ${actionCount} tindakan akan diproses sekaligus.\nBalas *YA* untuk memproses semua atau *BATAL* untuk membatalkan.`;
+      // Build confirmation prompt using the structured formatter
+      const confirmationItems: ConfirmationItem[] = resolvedActions.map((a) => ({
+        type: a.intentType as ConfirmationItem["type"],
+        categoryName: a.categoryName ?? null,
+        amount: a.amount,
+        description: a.description,
+        accountName: a.accountName,
+        fromAccountName: a.fromAccountName,
+        toAccountName: a.toAccountName,
+      }));
+      const confirmationPrompt = formatConfirmation(confirmationItems);
 
       return {
         status: "READY_FOR_CONFIRMATION",
@@ -333,8 +346,11 @@ export class FinancialParserService {
           transactionDate: transferDate,
           fromAccountId: fromRes.account.id,
           toAccountId: toRes.account.id,
+          // Display-only fields for response formatter
+          fromAccountName: fromRes.account.name,
+          toAccountName: toRes.account.name,
         },
-        summaryLine: `${prefix}🔄 Transfer ${fmtAmount}\n   Dari: ${fromRes.account.name} → Ke: ${toRes.account.name}`,
+        summaryLine: `${prefix}\uD83D\uDD04 Transfer ${fmtAmount}\n   Dari: ${fromRes.account.name} \u2192 Ke: ${toRes.account.name}`,
       };
     }
 
@@ -387,6 +403,9 @@ export class FinancialParserService {
         transactionDate: txDate,
         accountId: accRes.account.id,
         categoryId: resolvedCategoryId,
+        // Display-only fields for response formatter
+        categoryName,
+        accountName: accRes.account.name,
       },
       summaryLine: `${prefix}${emoji} ${label} ${fmtAmount} — ${intent.description}\n   Kategori: ${categoryName} | Akun: ${accRes.account.name}`,
     };

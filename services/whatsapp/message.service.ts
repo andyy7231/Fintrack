@@ -1,4 +1,4 @@
-﻿import { db } from "@/lib/db";
+import { db } from "@/lib/db";
 import { whatsappMessages } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { WhatsAppInboundMessage, ProcessedWhatsAppMessage } from "./types";
@@ -13,6 +13,13 @@ import { SalaryAllocationService } from "./salary-allocation.service";
 import { GreetingService } from "./greeting.service";
 import { TransactionDeletionService } from "./transaction-deletion.service";
 import { TransactionQueryService } from "./transaction-query.service";
+import { ConfirmationExecutor } from "./confirmation-executor.service";
+import {
+  formatCancellation,
+  formatNoPendingAction,
+  formatUnknownMessage,
+  formatSystemError,
+} from "./response-formatter.service";
 
 export class WhatsAppMessageService {
   /**
@@ -155,29 +162,12 @@ export class WhatsAppMessageService {
               );
 
               if (!activeAction) {
-                outboundReply =
-                  "Tidak ada transaksi yang sedang menunggu konfirmasi atau batas waktu konfirmasi telah habis.\n\n" +
-                  "Kirim pesan transaksi baru untuk memulai, contoh: 'Beli kopi 25 ribu'.";
+                outboundReply = formatNoPendingAction();
               } else {
-                try {
-                  const confirmResult = await PendingActionService.confirmAction(
-                    activeAction.id,
-                    mapping.userId
-                  );
-                  const count = confirmResult.actionCount || 1;
-                  outboundReply =
-                    count > 1
-                      ? `âœ… ${count} transaksi berhasil dicatat sekaligus!\n\nCatatan keuangan Anda telah diperbarui.`
-                      : "âœ… Transaksi berhasil dicatat!\n\nCatatan keuangan Anda telah diperbarui.";
-                } catch (err: unknown) {
-                  const errMsg =
-                    err instanceof Error ? err.message : "Gagal mengonfirmasi transaksi";
-                  if (errMsg.includes("DUPLICATE_CONFIRMATION")) {
-                    outboundReply = "Transaksi ini sudah dicatat sebelumnya.";
-                  } else {
-                    outboundReply = `Gagal mencatat transaksi: ${errMsg}`;
-                  }
-                }
+                outboundReply = await ConfirmationExecutor.executeAndFormat(
+                  activeAction.id,
+                  mapping.userId
+                );
               }
               finalStatus = "PROCESSED";
             } else if (isCancelCmd) {
@@ -191,7 +181,7 @@ export class WhatsAppMessageService {
                   activeAction.id,
                   mapping.userId
                 );
-                outboundReply = "Pencatatan transaksi telah dibatalkan.";
+                outboundReply = formatCancellation();
               } else {
                 outboundReply = "Tidak ada transaksi yang perlu dibatalkan.";
               }
@@ -245,7 +235,7 @@ export class WhatsAppMessageService {
               } else if (parseResult.status === "NEEDS_CLARIFICATION") {
                 outboundReply = parseResult.clarificationText;
               } else {
-                outboundReply = parseResult.errorText;
+                outboundReply = parseResult.errorText ?? formatUnknownMessage();
               }
               finalStatus = "PROCESSED";
             }
@@ -297,6 +287,7 @@ export class WhatsAppMessageService {
         userId: matchedUserId,
         phoneNumber: message.normalizedPhoneNumber,
         status: "FAILED",
+        responseSent: formatSystemError(),
         isDuplicate: false,
       };
     }

@@ -1,5 +1,5 @@
 import { TransactionService } from "@/services/transaction.service";
-import { formatRupiah } from "@/services/ai/amount.utils";
+import { formatTransactionList, TransactionListItem } from "./response-formatter.service";
 
 export class TransactionQueryService {
   /**
@@ -7,7 +7,7 @@ export class TransactionQueryService {
    */
   static isTransactionQuery(text: string): boolean {
     const lower = text.toLowerCase().trim();
-    
+
     const queryKeywords = [
       "lihat transaksi",
       "tampilkan transaksi",
@@ -19,9 +19,10 @@ export class TransactionQueryService {
       "transaksi kemarin",
       "transaksi minggu ini",
       "transaksi bulan ini",
+      "transaksi terakhir",
     ];
-    
-    return queryKeywords.some(keyword => lower.includes(keyword));
+
+    return queryKeywords.some((keyword) => lower.includes(keyword));
   }
 
   /**
@@ -32,14 +33,19 @@ export class TransactionQueryService {
     text: string
   ): Promise<string> {
     const lower = text.toLowerCase().trim();
-    
+
     // Determine date range
     const today = new Date();
     let startDate: Date;
     let endDate: Date = new Date(today);
     endDate.setHours(23, 59, 59, 999);
-    
-    if (lower.includes("hari ini")) {
+    let limit: number | undefined;
+
+    if (lower.includes("terakhir")) {
+      // Recent 5 transactions (no date filter)
+      limit = 5;
+      startDate = new Date(0); // epoch
+    } else if (lower.includes("hari ini")) {
       startDate = new Date(today);
       startDate.setHours(0, 0, 0, 0);
     } else if (lower.includes("kemarin")) {
@@ -61,58 +67,29 @@ export class TransactionQueryService {
       startDate.setDate(startDate.getDate() - 7);
       startDate.setHours(0, 0, 0, 0);
     }
-    
+
     // Fetch transactions
-    const transactions = await TransactionService.getTransactions(userId, {
-      startDate,
-      endDate,
+    const txs = await TransactionService.getTransactions(userId, {
+      startDate: limit ? undefined : startDate,
+      endDate: limit ? undefined : endDate,
+      limit: limit ?? 20,
     });
-    
-    if (transactions.length === 0) {
-      return "?? Tidak ada transaksi ditemukan untuk periode tersebut.";
-    }
-    
-    // Format response
+
     const periodLabel = this.getPeriodLabel(lower);
-    let response = `?? *Riwayat Transaksi ${periodLabel}*\n\n`;
-    
-    let totalIncome = 0;
-    let totalExpense = 0;
-    
-    const lines: string[] = [];
-    transactions.forEach((tx, idx) => {
-      const date = new Date(tx.transactionDate);
-      const dateStr = date.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-      const emoji = tx.type === "INCOME" ? "??" : "??";
-      const sign = tx.type === "INCOME" ? "+" : "-";
-      const amount = typeof tx.amount === "string" ? parseFloat(tx.amount) : tx.amount;
-      
-      lines.push(
-        `${idx + 1}. ${emoji} ${dateStr} | ${sign}${formatRupiah(amount)}\n` +
-        `   ${tx.description || "(no description)"}`
-      );
-      
-      if (tx.type === "INCOME") {
-        totalIncome += amount;
-      } else {
-        totalExpense += amount;
-      }
-    });
-    
-    response += lines.join("\n\n");
-    response += `\n\n---------------\n`;
-    response += `?? Total Pemasukan: ${formatRupiah(totalIncome)}\n`;
-    response += `?? Total Pengeluaran: ${formatRupiah(totalExpense)}\n`;
-    response += `?? Net: ${formatRupiah(totalIncome - totalExpense)}`;
-    
-    if (transactions.length >= 20) {
-      response += `\n\n?? Menampilkan 20 transaksi terbaru. Lihat lebih lengkap di dashboard web.`;
-    }
-    
-    return response;
+
+    const items: TransactionListItem[] = txs.map((tx) => ({
+      type: tx.type as "EXPENSE" | "INCOME",
+      categoryName: tx.categoryName ?? null,
+      amount: typeof tx.amount === "string" ? parseFloat(tx.amount) : tx.amount,
+      description: tx.description || "(tanpa keterangan)",
+      transactionDate: new Date(tx.transactionDate),
+    }));
+
+    return formatTransactionList(items, periodLabel);
   }
-  
+
   private static getPeriodLabel(lowerText: string): string {
+    if (lowerText.includes("terakhir")) return "Terakhir";
     if (lowerText.includes("hari ini")) return "Hari Ini";
     if (lowerText.includes("kemarin")) return "Kemarin";
     if (lowerText.includes("minggu ini")) return "7 Hari Terakhir";
@@ -120,5 +97,3 @@ export class TransactionQueryService {
     return "7 Hari Terakhir";
   }
 }
-
-

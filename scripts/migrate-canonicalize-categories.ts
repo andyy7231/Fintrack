@@ -34,7 +34,7 @@ async function deduplicateScopedCategories(scopeLabel: string, scopeCondition: R
 
   let renamedCount = 0;
   let deletedCount = 0;
-  let reassignedTxCount = 0;
+  const reassignedTxCount = 0;
 
   // Step A: Rename legacy variants to canonical (in-place)
   for (const row of rows) {

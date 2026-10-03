@@ -1,8 +1,14 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 // ─── Period type ───────────────────────────────────────────────────────────────
 
-export const periodTypeSchema = z.enum(["MONTHLY", "CUSTOM"]);
+export const periodTypeSchema = z.enum([
+  "MONTHLY",           // Calendar month budget (existing)
+  "CUSTOM",            // Custom date range (existing)
+  "ROLLING_30_DAYS",   // 30 days from creation date
+  "ROLLING_7_DAYS",    // 7 days from creation date
+  "ROLLING_90_DAYS",   // 90 days from creation date
+]);
 
 export type PeriodType = z.infer<typeof periodTypeSchema>;
 
@@ -59,13 +65,35 @@ export const createCustomBudgetSchema = z
     path: ["startDate"],
   });
 
+/**
+ * Schema for creating a ROLLING period budget (30/7/90 days).
+ * Budget starts from specified date (or today if not provided).
+ */
+export const createRollingBudgetSchema = z.object({
+  periodType: z.enum(["ROLLING_30_DAYS", "ROLLING_7_DAYS", "ROLLING_90_DAYS"]),
+  accountId: z.string().min(1, "accountId diperlukan"),
+  categoryId: z.string().min(1, "categoryId diperlukan"),
+  amount: z
+    .string()
+    .or(z.number())
+    .transform((v) => String(v))
+    .refine((v) => parseFloat(v) > 0, {
+      message: "Nominal budget harus lebih dari 0",
+    }),
+  currency: z.string().default("IDR"),
+  /** Optional: Jakarta-local start date. Defaults to today if not provided. */
+  startDate: z.string().date("startDate harus format YYYY-MM-DD").optional(),
+});
+
 export const createBudgetSchema = z.discriminatedUnion("periodType", [
   createMonthlyBudgetSchema,
   createCustomBudgetSchema,
+  createRollingBudgetSchema,
 ]);
 
 export type CreateMonthlyBudgetInput = z.infer<typeof createMonthlyBudgetSchema>;
 export type CreateCustomBudgetInput = z.infer<typeof createCustomBudgetSchema>;
+export type CreateRollingBudgetInput = z.infer<typeof createRollingBudgetSchema>;
 export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 
 // ─── Update budget ─────────────────────────────────────────────────────────────

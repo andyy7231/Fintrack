@@ -6,6 +6,30 @@ function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID").format(Math.round(amount));
 }
 
+
+function getPeriodTypeLabel(periodType: string): string {
+  switch (periodType) {
+    case "MONTHLY": return "Budget Bulanan";
+    case "ROLLING_30_DAYS": return "Budget 30 Hari";
+    case "ROLLING_7_DAYS": return "Budget 7 Hari";
+    case "ROLLING_90_DAYS": return "Budget 90 Hari";
+    case "CUSTOM": return "Budget Custom";
+    default: return periodType;
+  }
+}
+
+function getRemainingDays(endDate: Date): number {
+  const now = new Date();
+  const diff = endDate.getTime() - now.getTime();
+  const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
+  return Math.max(0, days);
+}
+
+function formatIndonesianDate(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const d = new Date(date);
+  return `${d.getDate()} ${months[d.getMonth()]}`;
+}
 export class BudgetQueryService {
   /**
    * Determine if an inbound message is asking to check budget status

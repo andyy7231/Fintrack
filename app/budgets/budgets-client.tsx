@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useTransition, useMemo } from "react";
 import { formatCurrency } from "@/lib/utils";
@@ -14,9 +14,18 @@ interface Category {
   type: string;
 }
 
+export interface AccountOption {
+  id: string;
+  name: string;
+  type: string;
+  currency: string;
+  currentBalance: number;
+}
+
 interface BudgetsClientProps {
   initialBudgets: BudgetProgressDTO[];
   expenseCategories: Category[];
+  accounts: AccountOption[];
 }
 
 type PeriodType = "MONTHLY" | "ROLLING_7_DAYS" | "ROLLING_30_DAYS" | "ROLLING_90_DAYS" | "CUSTOM";
@@ -52,15 +61,20 @@ function getPeriodTypeLabel(periodType: string): string {
   }
 }
 
-function formatIndonesianDate(date: Date): string {
+function toSafeDate(date: Date | string): Date {
+  return date instanceof Date ? date : new Date(date);
+}
+
+function formatIndonesianDate(date: Date | string): string {
   const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
-  const d = new Date(date);
+  const d = toSafeDate(date);
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function getRemainingDays(endDate: Date): number {
+function getRemainingDays(endDate: Date | string): number {
+  const end = toSafeDate(endDate);
   const now = new Date();
-  const diff = endDate.getTime() - now.getTime();
+  const diff = end.getTime() - now.getTime();
   const days = Math.ceil(diff / (24 * 60 * 60 * 1000));
   return Math.max(0, days);
 }
@@ -76,6 +90,13 @@ function calculateRollingPeriodPreview(startDate: string | null, durationDays: n
     start: formatIndonesianDate(start),
     end: formatIndonesianDate(displayEnd),
   };
+}
+
+function getDefaultAccountId(accounts: AccountOption[]): string {
+  if (accounts.length === 0) return "";
+  const cashAcc = accounts.find((a) => a.type === "CASH");
+  if (cashAcc) return cashAcc.id;
+  return accounts[0]?.id ?? "";
 }
 
 // ─── Progress bar ───────────────────────────────────────────────────────────────
@@ -95,9 +116,11 @@ function ProgressBar({ pct, over }: { pct: number; over: boolean }) {
 
 function BudgetCard({
   budget,
+  accounts,
   onDelete,
 }: {
   budget: BudgetProgressDTO;
+  accounts?: AccountOption[];
   onDelete: (id: string) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -121,10 +144,11 @@ function BudgetCard({
 
   const periodLabel = getPeriodTypeLabel(budget.periodType);
   // FIX 2: Display last included date (endDate - 1 day) for rolling/custom periods
-  const endDateObj = new Date(budget.endDate);
+  const endDateObj = toSafeDate(budget.endDate);
   const displayEndDate = new Date(endDateObj.getTime() - 24 * 60 * 60 * 1000);
-  const periodRange = `${formatIndonesianDate(new Date(budget.startDate))} - ${formatIndonesianDate(displayEndDate)}`;
-  const remainingDays = getRemainingDays(new Date(budget.endDate));
+  const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
+  const remainingDays = getRemainingDays(budget.endDate);
+  const fundingAccount = accounts?.find((a) => a.id === (budget as { accountId?: string | null }).accountId);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -144,6 +168,11 @@ function BudgetCard({
               <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
                 {periodLabel}
               </span>
+              {fundingAccount && (
+                <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                  {fundingAccount.name}
+                </span>
+              )}
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {remainingDays > 0 ? `${remainingDays} hari lagi` : "Berakhir"}
               </p>
@@ -219,14 +248,17 @@ function BudgetCard({
 
 function CreateBudgetForm({
   categories,
+  accounts,
   onCreated,
 }: {
   categories: Category[];
+  accounts: AccountOption[];
   onCreated: (budget: BudgetProgressDTO) => void;
 }) {
   const { year: thisYear, month: thisMonth, date: today } = now();
 
   const [periodType, setPeriodType] = useState<PeriodType>("ROLLING_30_DAYS");
+  const [accountId, setAccountId] = useState(() => getDefaultAccountId(accounts));
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [year, setYear] = useState(thisYear);
@@ -252,21 +284,31 @@ function CreateBudgetForm({
     e.preventDefault();
     setError(null);
 
+    if (!accountId) {
+      setError("Pilih akun sumber dana terlebih dahulu");
+      return;
+    }
+
     type RequestBody = 
-      | { periodType: "MONTHLY"; categoryId: string; amount: number; year: number; month: number }
-      | { periodType: "CUSTOM"; categoryId: string; amount: number; startDate: string; endDate: string }
-      | { periodType: "ROLLING_7_DAYS" | "ROLLING_30_DAYS" | "ROLLING_90_DAYS"; categoryId: string; amount: number; startDate?: string };
+      | { periodType: "MONTHLY"; accountId: string; categoryId: string; amount: number; year: number; month: number }
+      | { periodType: "CUSTOM"; accountId: string; categoryId: string; amount: number; startDate: string; endDate: string }
+      | { periodType: "ROLLING_7_DAYS" | "ROLLING_30_DAYS" | "ROLLING_90_DAYS"; accountId: string; categoryId: string; amount: number; startDate?: string };
     
     let body: RequestBody;
     
     if (periodType === "MONTHLY") {
-      body = { periodType, categoryId, amount: parseFloat(amount), year, month };
+      body = { periodType, accountId, categoryId, amount: parseFloat(amount), year, month };
     } else if (periodType === "CUSTOM") {
-      body = { periodType, categoryId, amount: parseFloat(amount), startDate, endDate: customEndDate };
+      if (!startDate || !customEndDate) {
+        setError("Tanggal mulai dan tanggal akhir harus diisi untuk budget custom");
+        return;
+      }
+      body = { periodType, accountId, categoryId, amount: parseFloat(amount), startDate, endDate: customEndDate };
     } else {
       // Rolling periods
       body = { 
-        periodType, 
+        periodType,
+        accountId,
         categoryId, 
         amount: parseFloat(amount),
         ...(startDate && { startDate }),
@@ -334,6 +376,25 @@ function CreateBudgetForm({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Funding Account */}
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+            Akun Sumber Dana
+          </label>
+          <select
+            value={accountId}
+            onChange={(e) => setAccountId(e.target.value)}
+            required
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          >
+            {accounts.map((acc) => (
+              <option key={acc.id} value={acc.id}>
+                {acc.name} • {formatCurrency(acc.currentBalance, acc.currency)}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Category */}
         <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
@@ -468,7 +529,7 @@ function CreateBudgetForm({
 
       <button
         type="submit"
-        disabled={isPending || categories.length === 0}
+        disabled={isPending || categories.length === 0 || accounts.length === 0}
         className="mt-4 w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
       >
         {isPending ? "Menyimpan…" : "Simpan Budget"}
@@ -478,7 +539,7 @@ function CreateBudgetForm({
 }
 // ─── Main Client Component ──────────────────────────────────────────────────────
 
-export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClientProps) {
+export function BudgetsClient({ initialBudgets, expenseCategories, accounts }: BudgetsClientProps) {
   const [budgets, setBudgets] = useState<BudgetProgressDTO[]>(initialBudgets);
 
   const handleCreated = (budget: BudgetProgressDTO) => {
@@ -511,8 +572,20 @@ export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClie
         </div>
       )}
 
-      {/* Create form */}
-      {expenseCategories.length === 0 ? (
+      {/* Create form or empty state */}
+      {accounts.length === 0 ? (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Belum ada akun keuangan. Buat akun terlebih dahulu untuk mengalokasikan budget.
+          </p>
+          <a
+            href="/accounts"
+            className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
+          >
+            Kelola Akun
+          </a>
+        </div>
+      ) : expenseCategories.length === 0 ? (
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Belum ada kategori Expense. Buat kategori terlebih dahulu.
@@ -525,7 +598,7 @@ export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClie
           </a>
         </div>
       ) : (
-        <CreateBudgetForm categories={expenseCategories} onCreated={handleCreated} />
+        <CreateBudgetForm categories={expenseCategories} accounts={accounts} onCreated={handleCreated} />
       )}
 
       {/* Budget list */}
@@ -542,7 +615,7 @@ export function BudgetsClient({ initialBudgets, expenseCategories }: BudgetsClie
         ) : (
           <div className="grid gap-4">
             {budgets.map((b) => (
-              <BudgetCard key={b.id} budget={b} onDelete={handleDeleted} />
+              <BudgetCard key={b.id} budget={b} accounts={accounts} onDelete={handleDeleted} />
             ))}
           </div>
         )}

@@ -1,62 +1,55 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1790611544734,
-      "tag": "0000_charming_whiplash",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1790613337597,
-      "tag": "0001_clean_millenium_guard",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1790616876735,
-      "tag": "0002_modern_ultimo",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1790617808815,
-      "tag": "0003_lying_naoko",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1790619436692,
-      "tag": "0004_tense_otto_octavius",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1790621138256,
-      "tag": "0005_friendly_violations",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1790698300000,
-      "tag": "0006_add_budget_account_id",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1790698526337,
-      "tag": "0007_big_silk_fever",
-      "breakpoints": true
-    }
-  ]
+    "version":  "7",
+    "dialect":  "postgresql",
+    "entries":  [
+                    {
+                        "idx":  0,
+                        "version":  "7",
+                        "when":  1790611544734,
+                        "tag":  "0000_charming_whiplash",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  1,
+                        "version":  "7",
+                        "when":  1790613337597,
+                        "tag":  "0001_clean_millenium_guard",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  2,
+                        "version":  "7",
+                        "when":  1790616876735,
+                        "tag":  "0002_modern_ultimo",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  3,
+                        "version":  "7",
+                        "when":  1790617808815,
+                        "tag":  "0003_lying_naoko",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  4,
+                        "version":  "7",
+                        "when":  1790619436692,
+                        "tag":  "0004_tense_otto_octavius",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  5,
+                        "version":  "7",
+                        "when":  1790621138256,
+                        "tag":  "0005_friendly_violations",
+                        "breakpoints":  true
+                    },
+                    {
+                        "idx":  6,
+                        "version":  "7",
+                        "when":  1790698300000,
+                        "tag":  "0006_add_budget_account_id",
+                        "breakpoints":  true
+                    }
+                ]
 }

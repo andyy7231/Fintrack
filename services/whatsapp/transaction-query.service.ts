@@ -1,5 +1,4 @@
-﻿import { TransactionService } from "@/services/transaction.service";
-import { getJakartaDateString } from "@/services/ai/date.utils";
+import { TransactionService } from "@/services/transaction.service";
 import { formatRupiah } from "@/services/ai/amount.utils";
 
 export class TransactionQueryService {
@@ -70,12 +69,12 @@ export class TransactionQueryService {
     });
     
     if (transactions.length === 0) {
-      return "ℹ️ Tidak ada transaksi ditemukan untuk periode tersebut.";
+      return "?? Tidak ada transaksi ditemukan untuk periode tersebut.";
     }
     
     // Format response
     const periodLabel = this.getPeriodLabel(lower);
-    let response = `📊 *Riwayat Transaksi ${periodLabel}*\n\n`;
+    let response = `?? *Riwayat Transaksi ${periodLabel}*\n\n`;
     
     let totalIncome = 0;
     let totalExpense = 0;
@@ -84,7 +83,7 @@ export class TransactionQueryService {
     transactions.forEach((tx, idx) => {
       const date = new Date(tx.transactionDate);
       const dateStr = date.toLocaleDateString("id-ID", { day: "2-digit", month: "short" });
-      const emoji = tx.type === "INCOME" ? "💰" : "💸";
+      const emoji = tx.type === "INCOME" ? "??" : "??";
       const sign = tx.type === "INCOME" ? "+" : "-";
       const amount = typeof tx.amount === "string" ? parseFloat(tx.amount) : tx.amount;
       
@@ -101,13 +100,13 @@ export class TransactionQueryService {
     });
     
     response += lines.join("\n\n");
-    response += `\n\n───────────────\n`;
-    response += `💰 Total Pemasukan: ${formatRupiah(totalIncome)}\n`;
-    response += `💸 Total Pengeluaran: ${formatRupiah(totalExpense)}\n`;
-    response += `📈 Net: ${formatRupiah(totalIncome - totalExpense)}`;
+    response += `\n\n---------------\n`;
+    response += `?? Total Pemasukan: ${formatRupiah(totalIncome)}\n`;
+    response += `?? Total Pengeluaran: ${formatRupiah(totalExpense)}\n`;
+    response += `?? Net: ${formatRupiah(totalIncome - totalExpense)}`;
     
     if (transactions.length >= 20) {
-      response += `\n\n💡 Menampilkan 20 transaksi terbaru. Lihat lebih lengkap di dashboard web.`;
+      response += `\n\n?? Menampilkan 20 transaksi terbaru. Lihat lebih lengkap di dashboard web.`;
     }
     
     return response;
@@ -121,3 +120,5 @@ export class TransactionQueryService {
     return "7 Hari Terakhir";
   }
 }
+
+

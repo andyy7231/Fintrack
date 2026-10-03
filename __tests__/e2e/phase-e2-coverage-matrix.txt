@@ -1,0 +1,224 @@
+﻿━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE E.2 FINAL ACCEPTANCE AUDIT - COVERAGE MATRIX
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. AMOUNT PARSING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+25k                      | amount-parser.test.ts:28     | ✓ PASS
+25rb                     | amount-parser.test.ts:46     | ✓ PASS
+25.000                   | amount-parser.test.ts:132    | ✓ PASS
+25,000                   | amount-parser.test.ts:158    | ✓ PASS
+1.500.000                | amount-parser.test.ts:128    | ✓ PASS
+1,5jt                    | amount-parser.test.ts:84     | ✓ PASS
+1.5jt                    | amount-parser.test.ts:88     | ✓ PASS
+1 juta                   | amount-parser.test.ts:106    | ✓ PASS
+Rp25.000                 | amount-parser.test.ts:164    | ✓ PASS
+Rp 25.000                | amount-parser.test.ts:168    | ✓ PASS
+25 ribu                  | amount-parser.test.ts:56     | ✓ PASS
+decimal                  | amount-parser.test.ts:82-102 | ✓ PASS
+zero                     | amount-parser.test.ts:190    | ✓ PASS
+negative                 | amount-parser.test.ts:198    | ✓ PASS
+extremely large          | MISSING                      | ✗ NONE
+missing                  | amount-parser.test.ts:206    | ✓ PASS
+malformed                | amount-parser.test.ts:214-227| ✓ PASS
+exact integer            | All tests verify toBe(number)| ✓ PASS
+
+Coverage: 16/17 (94%) — MISSING: extremely large amount
+
+2. NATURAL LANGUAGE VARIATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+word-order variations    | phase-e2-edge-cases:101      | ✓ PASS
+temporal prefixes        | phase-e2-edge-cases:111      | ✓ PASS
+case variations          | phase-e2-edge-cases:181      | ✓ PASS
+whitespace variations    | phase-e2-edge-cases:211      | ✓ PASS
+punctuation              | phase-e2-edge-cases:562      | ✓ PASS
+typo/abbreviation        | MISSING                      | ✗ NONE
+
+Coverage: 5/6 (83%) — MISSING: reasonable typo variations
+
+3. DATE PARSING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+today                    | MISSING                      | ✗ NONE
+hari ini                 | MISSING                      | ✗ NONE
+kemarin                  | pattern-parser-verbless:81*  | ✓ PARTIAL
+tadi                     | phase-e2-edge-cases:111*     | ✓ PARTIAL
+explicit date            | MISSING                      | ✗ NONE
+relative date            | MISSING                      | ✗ NONE
+malformed date           | MISSING                      | ✗ NONE
+impossible date          | MISSING                      | ✗ NONE
+
+* Only tests message contains keyword, NOT actual date parsing logic
+
+Coverage: 0/8 (0%) — CRITICAL GAP: NO dedicated date parsing tests
+
+4. MISSING INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+missing amount           | phase-e2-edge-cases:238      | ✓ PASS
+missing account          | MISSING                      | ✗ NONE
+missing category         | MISSING                      | ✗ NONE
+missing description      | MISSING                      | ✗ NONE
+incomplete transfer      | phase-e2-edge-cases:283      | ✓ PASS
+"transfer 500k"          | phase-e2-edge-cases:283      | ✓ PASS
+"transfer dari BCA"      | phase-e2-edge-cases:318      | ✓ PASS
+"transfer ke GoPay"      | phase-e2-edge-cases:348      | ✓ PASS
+"makan"                  | phase-e2-edge-cases:238      | ✓ PASS
+"gajian"                 | phase-e2-edge-cases:270      | ✓ PASS
+must not mutate DB       | phase-e2-edge-cases:258      | ✓ PASS
+
+Coverage: 8/11 (73%) — MISSING: explicit account/category/description
+
+5. AMBIGUOUS ACCOUNTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+account not found        | phase-e2-edge-cases:378      | ✓ PASS
+similar account names    | MISSING                      | ✗ NONE
+inactive account         | postgres-e2e.test.ts:530     | ✓ PASS
+another user's account   | postgres-e2e.test.ts:326     | ✓ PASS
+
+Coverage: 3/4 (75%) — MISSING: similar account name ambiguity
+
+6. AMBIGUOUS CATEGORIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+category not found       | postgres-e2e.test.ts:351     | ✓ PASS
+multiple possible        | MISSING                      | ✗ NONE
+wrong category type      | MISSING                      | ✗ NONE
+EXPENSE+INCOME category  | MISSING                      | ✗ NONE
+INCOME+EXPENSE category  | MISSING                      | ✗ NONE
+
+Coverage: 1/5 (20%) — CRITICAL GAP: category type mismatch untested
+
+7. TRANSFER EDGE CASES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+missing source           | phase-e2-edge-cases:348      | ✓ PASS
+missing destination      | phase-e2-edge-cases:318      | ✓ PASS
+same source/destination  | postgres-e2e.test.ts:371     | ✓ PASS
+inactive source          | MISSING                      | ✗ NONE
+inactive destination     | MISSING                      | ✗ NONE
+foreign account          | postgres-e2e.test.ts:326     | ✓ PASS
+currency mismatch        | N/A (single currency)        | N/A
+insufficient balance     | N/A (not enforced)           | N/A
+malformed transfer       | phase-e2-edge-cases:283      | ✓ PASS
+atomicity                | postgres-e2e.test.ts:371     | ✓ PASS
+
+Coverage: 6/8 (75%) — MISSING: inactive account transfers
+
+8. DUPLICATE / REPLAY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+same whatsappMessageId   | postgres-e2e.test.ts:290     | ✓ PASS
+same payload, diff ID    | MISSING                      | ✗ NONE
+webhook retry            | MISSING                      | ✗ NONE
+duplicate confirmation   | MISSING                      | ✗ NONE
+duplicate cancellation   | MISSING                      | ✗ NONE
+
+Coverage: 1/5 (20%) — CRITICAL GAP: replay scenarios untested
+
+9. CONFIRMATION EDGE CASES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+YA                       | postgres-e2e.test.ts:389     | ✓ PASS
+case variations          | phase-e2-edge-cases:410-455  | ✓ PASS
+whitespace               | phase-e2-edge-cases:475      | ✓ PASS
+BATAL                    | postgres-e2e.test.ts:427     | ✓ PASS
+duplicate YA             | MISSING                      | ✗ NONE
+YA without pending       | phase-e2-edge-cases:503      | ✓ PASS
+BATAL without pending    | phase-e2-edge-cases:531      | ✓ PASS
+USER_B confirm USER_A    | MISSING                      | ✗ NONE
+
+Coverage: 6/8 (75%) — MISSING: duplicate confirm, cross-user confirm
+
+10. USER ISOLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+foreign account          | postgres-e2e.test.ts:326     | ✓ PASS
+foreign category         | MISSING                      | ✗ NONE
+foreign pending action   | MISSING                      | ✗ NONE
+foreign transaction      | postgres-e2e.test.ts:326     | ✓ PASS
+unauthorized transfer    | postgres-e2e.test.ts:371     | ✓ PASS
+
+Coverage: 3/5 (60%) — MISSING: category/pending action isolation
+
+11. NON-FINANCIAL MESSAGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+"halo"                   | phase-e2-edge-cases:561      | ✓ PASS
+"hai"                    | phase-e2-edge-cases:587      | ✓ PASS
+"apa kabar"              | phase-e2-edge-cases:607      | ✓ PASS
+random text              | phase-e2-edge-cases:627      | ✓ PASS
+emoji                    | MISSING                      | ✗ NONE
+empty string             | phase-e2-edge-cases:647      | ✓ PASS
+whitespace-only          | phase-e2-edge-cases:667      | ✓ PASS
+no transaction           | phase-e2-edge-cases:571      | ✓ PASS
+
+Coverage: 7/8 (88%) — MISSING: emoji handling
+
+12. MALFORMED / DEFENSIVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requirement              | Existing Test                | Status
+────────────────────────────────────────────────────────────────
+very long message        | phase-e2-edge-cases:689      | ✓ PASS
+Unicode                  | MISSING                      | ✗ NONE
+punctuation              | phase-e2-edge-cases:719-754  | ✓ PASS
+malformed webhook        | MISSING                      | ✗ NONE
+missing required fields  | webhook-verification.test.ts | ✓ PASS
+invalid message type     | MISSING                      | ✗ NONE
+unexpected JSON          | MISSING                      | ✗ NONE
+null/undefined input     | MISSING                      | ✗ NONE
+no unhandled exception   | phase-e2-edge-cases (all)    | ✓ PASS
+
+Coverage: 4/9 (44%) — GAPS: Unicode, webhook, JSON, null handling
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OVERALL COVERAGE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Category                 | Covered | Total | Percentage
+────────────────────────────────────────────────────────
+1. Amount Parsing        | 16      | 17    | 94%
+2. Natural Language      | 5       | 6     | 83%
+3. Date Parsing          | 0       | 8     | 0% ❌ CRITICAL
+4. Missing Information   | 8       | 11    | 73%
+5. Ambiguous Accounts    | 3       | 4     | 75%
+6. Ambiguous Categories  | 1       | 5     | 20% ❌ CRITICAL
+7. Transfer Edge Cases   | 6       | 8     | 75%
+8. Duplicate/Replay      | 1       | 5     | 20% ❌ CRITICAL
+9. Confirmation          | 6       | 8     | 75%
+10. User Isolation       | 3       | 5     | 60%
+11. Non-Financial        | 7       | 8     | 88%
+12. Malformed/Defensive  | 4       | 9     | 44%
+
+TOTAL COVERAGE:          | 60      | 94    | 64%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL GAPS REQUIRING NEW TESTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PRIORITY 1 (0% coverage):
+  ❌ Date Parsing (0/8) — NO tests for parseIndonesianDate utility
+
+PRIORITY 2 (20% coverage):
+  ❌ Ambiguous Categories (1/5) — category type mismatches untested
+  ❌ Duplicate/Replay (1/5) — replay protection incomplete
+
+PRIORITY 3 (60% or less):
+  ⚠️  User Isolation (3/5) — category/pending isolation untested
+  ⚠️  Malformed/Defensive (4/9) — webhook/JSON validation gaps
+
+RECOMMENDED NEW TESTS: ~34 tests minimum

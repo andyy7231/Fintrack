@@ -281,7 +281,7 @@ export class WhatsAppMessageService {
         responseSent: outboundReply || undefined,
         isDuplicate: false,
       };
-    } catch {
+    } catch (error) {
       await db
         .update(whatsappMessages)
         .set({

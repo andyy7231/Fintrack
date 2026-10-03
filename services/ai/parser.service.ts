@@ -176,7 +176,8 @@ export class FinancialParserService {
         confirmationPrompt,
         actions: resolvedActions,
       };
-    } catch {
+    } catch (error) {
+      console.error("[FinancialParserService] Error in processFinancialText:", error);
       return {
         status: "ERROR",
         errorText: "Maaf, terjadi kendala saat memproses pesan transaksi Anda. Coba tulis seperti: 'Beli kopi 25 ribu'.",

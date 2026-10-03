@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Indonesian Rupiah Amount Parser & Normalizer
  *
  * Normalizes colloquial Indonesian monetary expressions into numeric values.
@@ -33,7 +33,7 @@ export function parseIndonesianAmount(raw: string | number): number | null {
 
   // Match expressions with multipliers: juta / jt, ribu / rb / k, miliar / m
   // Pattern: number (with possible decimal comma or dot) followed by unit
-  const multiplierRegex = /^([0-9]+(?:[.,][0-9]+)?)\s*(juta|jt|miliar|m|ribu|rb|k)$/i;
+  const multiplierRegex = /^([0-9]+(?:[.,][0-9]+)*)\s*(juta|jt|miliar|m|ribu|rb|k)$/i;
   const match = text.match(multiplierRegex);
 
   if (match) {
@@ -89,3 +89,4 @@ export function parseIndonesianAmount(raw: string | number): number | null {
 export function formatRupiah(amount: number): string {
   return `Rp${Math.round(amount).toLocaleString("id-ID")}`;
 }
+

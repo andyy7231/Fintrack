@@ -134,15 +134,15 @@ describe('Bug Condition Exploration - Pattern Parser Category Inference', () => 
       expect(result.parseMethod).toBe('PATTERN');
     });
 
-    test('Command with no category keywords should infer Lainnya', () => {
+    test('Command with no category keywords should infer Pengeluaran Lain', () => {
       const result = PatternParserService.attemptPatternParse('bayar sesuatu 50k');
       
       expect(result.success).toBe(true);
       expect(result.intent.intent).toBe('EXPENSE');
       expect(result.intent.amount).toBe(50000);
       
-      // Should explicitly infer "Lainnya" rather than returning null
-      expect(result.intent.categoryHint).toBe('Lainnya');
+      // Should explicitly infer "Pengeluaran Lain" rather than returning null
+      expect(result.intent.categoryHint).toBe('Pengeluaran Lain');
       expect(result.parseMethod).toBe('PATTERN');
     });
   });

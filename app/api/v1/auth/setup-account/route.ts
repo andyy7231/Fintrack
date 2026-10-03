@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { accounts, categories } from "@/db/schema/finance";
-import { whatsappContacts } from "@/db/schema/whatsapp";
 import { UserMappingService } from "@/services/whatsapp/user-mapping.service";
 import { normalizePhoneNumber } from "@/services/whatsapp/phone.utils";
 import { apiSuccess, apiError, ErrorCodes } from "@/lib/utils/api-response";
@@ -93,3 +92,5 @@ export async function POST(req: NextRequest) {
     return apiError(ErrorCodes.INTERNAL_ERROR, message, 500);
   }
 }
+
+

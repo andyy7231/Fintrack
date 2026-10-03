@@ -1,0 +1,139 @@
+﻿=== PHASE E.2 TEST COVERAGE AUDIT ===
+
+EXISTING COVERAGE (218 total tests before E.2):
+
+A. AMOUNT PARSING (66 tests - amount-parser.test.ts)
+✓ k/K suffix variations
+✓ rb/RB suffix
+✓ ribu variations
+✓ jt/JT suffix
+✓ juta full word
+✓ Decimal formats (1,5jt / 1.5jt)
+✓ Indonesian separators (1.500.000)
+✓ English separators (1,500,000)
+✓ Rp prefix variations
+✓ Zero/negative/invalid → null
+✓ Whitespace handling
+✓ Case insensitivity
+✓ Numeric input
+✓ Infinity/NaN rejection
+
+B. PARSER LOGIC (89 tests across multiple files)
+✓ Balance queries (16 tests)
+✓ Income detection (18 tests)
+✓ Category inference (11 tests)
+✓ Pattern preservation (15 tests)
+✓ Verbless expense (7 tests)
+✓ Transfer detection (16 tests)
+✓ Parser direct (1 test)
+✓ Pattern preservation (5 tests)
+
+C. E2E DATABASE FLOW (18 tests - E2E files)
+✓ Database safety (3 tests)
+✓ Basic expense/income/transfer flows (3 tests)
+✓ Idempotency (1 test)
+✓ User isolation (1 test)
+✓ Category validation (1 test)
+✓ Transfer security (1 test)
+✓ YA confirmation (1 test)
+✓ BATAL cancellation (1 test)
+✓ Message lifecycle (1 test)
+✓ Account balance updates (1 test)
+✓ Inactive account (1 test)
+✓ Ambiguous message (1 test)
+✓ Debug simple expense (1 test)
+✓ Webhook verification (8 tests)
+
+D. UNIT TESTS
+✓ Parser direct test (1 test)
+
+GAPS IDENTIFIED FOR PHASE E.2:
+
+A. Amount Parsing Edge Cases (ALREADY COVERED)
+- Zero, negative, invalid formats already tested
+
+B. Natural Language Variations (MINIMAL COVERAGE)
+✗ "tadi makan 25rb"
+✗ "barusan beli makan 25 ribu"
+✗ "aku habis makan 25k"
+✗ Extra whitespace/punctuation
+✗ Uppercase/lowercase full messages
+✗ Typo variations
+
+C. Date Parsing (NO COVERAGE)
+✗ "hari ini"
+✗ "kemarin"
+✗ "tadi"
+✗ Explicit dates
+✗ Malformed dates
+
+D. Missing Information (PARTIAL COVERAGE)
+✓ Transfer without accounts (covered in transfer-detection)
+✗ No amount
+✗ No category (explicit test)
+✗ "makan" (no amount)
+✗ "gajian" (no amount)
+
+E. Ambiguous Accounts (MINIMAL COVERAGE)
+✓ User isolation (1 test)
+✓ Inactive account (1 test)
+✗ Account not found
+✗ Similar account names
+✗ Multiple matches
+
+F. Ambiguous Categories (MINIMAL COVERAGE)
+✓ Category validation (1 E2E test)
+✗ Multiple possible categories
+✗ Wrong category type (EXPENSE using INCOME category)
+
+G. Transfer Edge Cases (PARTIAL COVERAGE)
+✓ Same source/destination (1 test)
+✗ Missing source only
+✗ Missing destination only
+✗ Inactive source
+✗ Inactive destination
+✗ Foreign user account
+✗ Currency mismatch
+
+H. Duplicate/Replay Messages (PARTIAL COVERAGE)
+✓ Idempotency (1 test - same whatsappMessageId)
+✗ Same payload, different ID
+✗ Webhook retry
+✗ Duplicate confirmation
+✗ Duplicate cancellation
+
+I. Confirmation Edge Cases (PARTIAL COVERAGE)
+✓ YA confirmation (1 test)
+✓ BATAL cancellation (1 test)
+✗ Case variations (ya, Ya, YA)
+✗ Whitespace around YA/BATAL
+✗ Duplicate YA
+✗ YA without pending action
+✗ BATAL without pending action
+✗ Cross-user confirmation attempt
+
+J. User Isolation (MINIMAL COVERAGE)
+✓ Basic isolation (1 test)
+✗ USER_A using USER_B account
+✗ USER_A using USER_B category
+✗ USER_A confirming USER_B pending action
+✗ USER_A transferring to USER_B account
+
+K. Non-Financial Messages (MINIMAL COVERAGE)
+✓ Ambiguous message (1 test - "keluar 100k")
+✗ "halo" / "hai"
+✗ "apa kabar"
+✗ Random text
+✗ Emojis
+✗ Empty/whitespace messages
+
+L. Malformed/Defensive Inputs (NO COVERAGE)
+✗ Very long messages
+✗ Unusual Unicode
+✗ Repeated punctuation
+✗ Malformed webhook payload
+✗ Missing required webhook fields
+✗ Invalid message type
+✗ Null/undefined values
+
+RECOMMENDED E.2 TEST ADDITIONS: ~60-80 new tests

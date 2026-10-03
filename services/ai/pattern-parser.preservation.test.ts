@@ -16,7 +16,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { PatternParserService } from './pattern-parser.service';
-import type { PatternParseResult, PatternParseFailure } from './pattern-parser.service';
 
 describe('Pattern Parser - Preservation Properties (BEFORE FIX)', () => {
   describe('Property 2.1: Explicit Category Keyword Precedence', () => {
@@ -526,3 +525,5 @@ describe('Pattern Parser - Preservation Properties (BEFORE FIX)', () => {
     });
   });
 });
+
+

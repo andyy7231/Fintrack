@@ -1,0 +1,40 @@
+﻿  async function getAccountBalance(accountId: string): Promise<number> {
+    const [account] = await testDb.select().from(accounts).where(eq(accounts.id, accountId)).limit(1);
+    if (!account) return 0;
+    
+    const initialBalance = parseFloat(account.initialBalance);
+    
+    // Calculate dynamic balance: initial + income - expense + transfers_in - transfers_out
+    const incomeRes = await testDb
+      .select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.accountId, accountId),
+        eq(transactions.type, 'INCOME')
+      ));
+    
+    const expenseRes = await testDb
+      .select({ total: sql`COALESCE(SUM(${transactions.amount}), 0)` })
+      .from(transactions)
+      .where(and(
+        eq(transactions.accountId, accountId),
+        eq(transactions.type, 'EXPENSE')
+      ));
+    
+    const transfersInRes = await testDb
+      .select({ total: sql`COALESCE(SUM(${transfers.amount}), 0)` })
+      .from(transfers)
+      .where(eq(transfers.toAccountId, accountId));
+    
+    const transfersOutRes = await testDb
+      .select({ total: sql`COALESCE(SUM(${transfers.amount}), 0)` })
+      .from(transfers)
+      .where(eq(transfers.fromAccountId, accountId));
+    
+    const totalIncome = parseFloat(incomeRes[0]?.total as string || "0");
+    const totalExpense = parseFloat(expenseRes[0]?.total as string || "0");
+    const totalTransfersIn = parseFloat(transfersInRes[0]?.total as string || "0");
+    const totalTransfersOut = parseFloat(transfersOutRes[0]?.total as string || "0");
+    
+    return initialBalance + totalIncome - totalExpense + totalTransfersIn - totalTransfersOut;
+  }

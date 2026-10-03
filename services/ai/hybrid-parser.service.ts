@@ -53,7 +53,7 @@
  */
 
 import { FinancialParserService, ParseWorkflowResult, ResolvedActionPayload } from './parser.service';
-import { PatternParserService, PatternParseAttempt, PatternParsedIntent } from './pattern-parser.service';
+import { PatternParserService, PatternParsedIntent } from './pattern-parser.service';
 import { IntentResolverService } from './resolver.service';
 import { formatRupiah } from './amount.utils';
 import { parseIndonesianDate } from './date.utils';
@@ -374,24 +374,24 @@ export class HybridParserService {
           });
 
           return aiResult;
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Task 4.4: Detect AI service unavailability
+          const err = error as { code?: string | number; message?: string };
           const isServiceUnavailable =
-            error?.code === 503 ||
-            error?.code === 'ETIMEDOUT' ||
-            error?.message?.includes('API key') ||
-            error?.message?.includes('timeout') ||
-            error?.message?.includes('ECONNREFUSED');
+            err?.code === 503 ||
+            err?.code === 'ETIMEDOUT' ||
+            err?.message?.includes('API key') ||
+            err?.message?.includes('timeout') ||
+            err?.message?.includes('ECONNREFUSED');
 
           if (isServiceUnavailable) {
             // Log error for observability (Requirement 9.1, 9.4)
             console.error('[HybridParser] AI service unavailable:', {
-              errorCode: error?.code,
-              errorMessage: error?.message,
+              errorCode: err?.code,
+              errorMessage: err?.message,
               timestamp: new Date().toISOString(),
               userId,
             });
-
             return {
               status: 'NEEDS_CLARIFICATION',
               clarificationText:
@@ -770,3 +770,4 @@ export class HybridParserService {
     }
   }
 }
+

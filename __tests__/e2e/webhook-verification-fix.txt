@@ -1,0 +1,8 @@
+﻿      const response = await POST(request);
+
+      expect(response.status).toBe(401);
+      const body = await response.json();
+      // Error format may vary, just ensure it's an error response
+      expect(body).toHaveProperty('code');
+      expect(body.code).toBe('UNAUTHORIZED');
+    });

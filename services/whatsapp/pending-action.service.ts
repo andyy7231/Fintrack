@@ -1,6 +1,6 @@
-import { db } from "@/lib/db";
-import { whatsappPendingActions, transactions, transfers } from "@/db/schema";
-import { eq, and, desc, gte } from "drizzle-orm";
+﻿import { db } from "@/lib/db";
+import { whatsappPendingActions, transactions, transfers, accounts, categories } from "@/db/schema";
+import { eq, and, or, isNull, desc, gte } from "drizzle-orm";
 import { TransactionService } from "@/services/transaction.service";
 import { TransferService } from "@/services/transfer.service";
 import { BudgetService } from "@/services/budget.service";
@@ -201,6 +201,11 @@ export class PendingActionService {
   /**
    * Execute all actions in the batch atomically.
    *
+   * Phase D Security Enhancement:
+   * - Account ownership validation (GAP 1)
+   * - Category type compatibility validation (GAP 2)
+   * - Transfer account and currency validation (GAP 3)
+   *
    * EXPENSE / INCOME / TRANSFER run inside a single db.transaction().
    * BUDGET_ALLOCATION calls BudgetService.createBudget which manages its own
    * db calls — it cannot be nested inside a Drizzle transaction callback.
@@ -234,6 +239,47 @@ export class PendingActionService {
               throw new Error(`Akun transaksi wajib ada untuk item: ${action.description}`);
             }
 
+            // Phase D Security - GAP 1: Validate account ownership and active status
+            const [accountCheck] = await tx
+              .select()
+              .from(accounts)
+              .where(and(eq(accounts.id, action.accountId), eq(accounts.userId, userId)))
+              .limit(1);
+
+            if (!accountCheck) {
+              throw new Error(
+                `Akun tidak ditemukan atau bukan milik Anda untuk item: ${action.description}`
+              );
+            }
+
+            if (!accountCheck.isActive) {
+              throw new Error(`Akun '${accountCheck.name}' sedang nonaktif.`);
+            }
+
+            // Phase D Security - GAP 2: Validate category type compatibility (if category provided)
+            if (action.categoryId) {
+              const [categoryCheck] = await tx
+                .select()
+                .from(categories)
+                .where(
+                  and(
+                    eq(categories.id, action.categoryId),
+                    or(isNull(categories.userId), eq(categories.userId, userId))
+                  )
+                )
+                .limit(1);
+
+              if (!categoryCheck) {
+                throw new Error(`Kategori tidak ditemukan untuk item: ${action.description}`);
+              }
+
+              if (categoryCheck.type !== action.intentType) {
+                throw new Error(
+                  `Kategori '${categoryCheck.name}' adalah tipe ${categoryCheck.type}, tidak cocok dengan transaksi ${action.intentType} untuk item: ${action.description}`
+                );
+              }
+            }
+
             const [created] = await tx
               .insert(transactions)
               .values({
@@ -254,6 +300,53 @@ export class PendingActionService {
             if (!action.fromAccountId || !action.toAccountId) {
               throw new Error(
                 `Akun asal dan tujuan transfer wajib ada untuk item: ${action.description}`
+              );
+            }
+
+            if (action.fromAccountId === action.toAccountId) {
+              throw new Error(
+                `Akun asal dan akun tujuan transfer tidak boleh sama untuk item: ${action.description}`
+              );
+            }
+
+            // Phase D Security - GAP 3: Validate fromAccount ownership and active status
+            const [fromAccountCheck] = await tx
+              .select()
+              .from(accounts)
+              .where(and(eq(accounts.id, action.fromAccountId), eq(accounts.userId, userId)))
+              .limit(1);
+
+            if (!fromAccountCheck) {
+              throw new Error(
+                `Akun asal tidak ditemukan atau bukan milik Anda untuk item: ${action.description}`
+              );
+            }
+
+            if (!fromAccountCheck.isActive) {
+              throw new Error(`Akun asal '${fromAccountCheck.name}' sedang nonaktif.`);
+            }
+
+            // Phase D Security - GAP 3: Validate toAccount ownership and active status
+            const [toAccountCheck] = await tx
+              .select()
+              .from(accounts)
+              .where(and(eq(accounts.id, action.toAccountId), eq(accounts.userId, userId)))
+              .limit(1);
+
+            if (!toAccountCheck) {
+              throw new Error(
+                `Akun tujuan tidak ditemukan atau bukan milik Anda untuk item: ${action.description}`
+              );
+            }
+
+            if (!toAccountCheck.isActive) {
+              throw new Error(`Akun tujuan '${toAccountCheck.name}' sedang nonaktif.`);
+            }
+
+            // Phase D Security - GAP 3: Validate currency matching
+            if (fromAccountCheck.currency !== toAccountCheck.currency) {
+              throw new Error(
+                `Mata uang akun berbeda (${fromAccountCheck.currency} vs ${toAccountCheck.currency}). Konversi otomatis belum didukung untuk item: ${action.description}`
               );
             }
 
@@ -376,4 +469,3 @@ export class PendingActionService {
     return result.length > 0;
   }
 }
-

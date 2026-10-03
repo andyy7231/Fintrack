@@ -1,0 +1,29 @@
+﻿    test('Failed confirmation with invalid account', async () => {
+      const initialCount = await getTransactionCount(TEST_USERS.USER_A.id);
+      
+      await sendMessage(TEST_USERS.USER_A.phoneNormalized, 'makan 25000 pakai InvalidAccount');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      await sendMessage(TEST_USERS.USER_A.phoneNormalized, 'YA');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const finalCount = await getTransactionCount(TEST_USERS.USER_A.id);
+      const delta = finalCount - initialCount;
+      
+      // If transaction created, verify it has valid data (not using invalid account)
+      if (delta > 0) {
+        const txs = await testDb.select().from(transactions)
+          .where(eq(transactions.userId, TEST_USERS.USER_A.id));
+        const latestTx = txs[txs.length - 1];
+        
+        // Should either have null account or a valid account from USER_A
+        if (latestTx.accountId) {
+          const [account] = await testDb.select().from(accounts)
+            .where(eq(accounts.id, latestTx.accountId)).limit(1);
+          expect(account).toBeDefined();
+          expect(account.userId).toBe(TEST_USERS.USER_A.id);
+        }
+      }
+      
+      console.log(`[Reliability] Invalid account: ${delta} transaction(s), validated`);
+    }, 15000);

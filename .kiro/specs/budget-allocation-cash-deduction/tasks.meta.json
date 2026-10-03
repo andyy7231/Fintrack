@@ -18,6 +18,26 @@
         "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
         "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
         "timestamp": 1790696760747
+      },
+      {
+        "executionId": "e9589537-a123-42a3-8941-069a14ccfe45",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790789241280
+      },
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963782649
+      },
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963796142
+      },
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790964673424
       }
     ],
     "3.1 Create database migration for accountId in budgets table": [
@@ -109,6 +129,128 @@
         "executionId": "7685f150-3afa-466d-a44e-a2be4c64cac1",
         "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
         "timestamp": 1790696763183
+      }
+    ],
+    "3.1 Implement BudgetService.findApplicableBudget() method": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963782870
+      },
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790964679903
+      }
+    ],
+    "3.2 Implement BudgetService.validateBudgetConsumption() method": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963783095
+      },
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790964690464
+      }
+    ],
+    "3.3 Update TransactionService.createTransaction to use budget validation": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963783288
+      }
+    ],
+    "3.4 Verify AccountService.getFreeCash implementation is correct": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963783479
+      }
+    ],
+    "3.5 Update DashboardService to include freeCash in summary": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963783753
+      }
+    ],
+    "3.6 Update Dashboard UI to display both Uang Keseluruhan and Uang Free": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963783911
+      }
+    ],
+    "3.7 Update WhatsApp balance query to return Free Cash": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784061
+      }
+    ],
+    "3.8 Verify budget spent aggregation still works correctly": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784213
+      }
+    ],
+    "3.9 Verify budget creation validation still works": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784343
+      }
+    ],
+    "3.10 Verify transfer operations don't affect budgets": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784476
+      }
+    ],
+    "3.11 Verify income operations work correctly with budgets": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784605
+      }
+    ],
+    "3.12 Verify budget update/delete affects Free Cash correctly": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784731
+      }
+    ],
+    "3.13 Add comprehensive integration tests for budget-expense interaction": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963784857
+      }
+    ],
+    "3.14 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963785025
+      }
+    ],
+    "3.15 Verify preservation tests still pass": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963785194
+      }
+    ],
+    "4. Checkpoint - Ensure all tests pass and quality gates met": [
+      {
+        "executionId": "d04406f2-132e-49d5-93aa-4c33f0d1bf38",
+        "chatSessionId": "sess_060c9695-25f2-4329-b4d3-3279a4088045",
+        "timestamp": 1790963785324
       }
     ]
   }

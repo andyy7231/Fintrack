@@ -1,7 +1,7 @@
-﻿import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, type GenerativeModel } from "@google/generative-ai";
 import {
   ParsedFinancialBatch,
-  ParsedFinancialIntent,
+
   financialBatchSchema,
 } from "./schemas";
 import { FinancialParserInput, FinancialParserProvider } from "./provider";
@@ -19,7 +19,7 @@ import { FinancialParserInput, FinancialParserProvider } from "./provider";
  */
 export class GeminiAIProvider implements FinancialParserProvider {
   private genAI: GoogleGenerativeAI;
-  private model: any;
+  private model: GenerativeModel;
   private readonly MAX_RETRIES = 2;
   private readonly INITIAL_RETRY_DELAY = 500; // ms
 
@@ -73,8 +73,8 @@ export class GeminiAIProvider implements FinancialParserProvider {
       
       // Validate with Zod schema
       return financialBatchSchema.parse(parsed);
-    } catch (error: any) {
-      const errorMessage = error.message || "";
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const is503 = errorMessage.includes("503") || errorMessage.includes("Service Unavailable");
       const is429 = errorMessage.includes("429") || errorMessage.includes("Too Many Requests");
       const isTransient = is503 || is429;
@@ -94,9 +94,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
       let clarificationMessage = "Maaf, saya belum dapat memahami pesan Anda. Coba tulis seperti: 'Beli kopi 25 ribu' atau 'Gajian 5 juta'.";
       
       if (is503) {
-        clarificationMessage = "⏳ AI assistant sedang sibuk (high demand). Coba lagi dalam beberapa saat atau gunakan format: 'Beli kopi 25 ribu'.";
+        clarificationMessage = "? AI assistant sedang sibuk (high demand). Coba lagi dalam beberapa saat atau gunakan format: 'Beli kopi 25 ribu'.";
       } else if (is429) {
-        clarificationMessage = "⏳ Terlalu banyak request. Tunggu sebentar dan coba lagi.";
+        clarificationMessage = "? Terlalu banyak request. Tunggu sebentar dan coba lagi.";
       }
 
       return {
@@ -151,9 +151,9 @@ export class GeminiAIProvider implements FinancialParserProvider {
 
 **Important Rules:**
 1. **Amount Parsing:**
-   - "25rb", "25ribu", "25k" → 25000
-   - "2.5jt", "2,5juta", "2.5m" → 2500000
-   - "500", "500000" → exact number
+   - "25rb", "25ribu", "25k" ? 25000
+   - "2.5jt", "2,5juta", "2.5m" ? 2500000
+   - "500", "500000" ? exact number
 
 2. **Category Matching:**
    - Match to user's existing categories when possible
@@ -161,16 +161,16 @@ export class GeminiAIProvider implements FinancialParserProvider {
    - For budget/expense, use EXPENSE categories only
 
 3. **Natural Language:**
-   - Handle typos: "makn" → "makan", "transpot" → "transport"
-   - Handle conversational: "tadi beli kopi 25k" → EXPENSE
-   - Handle shorthand: "makan 50k" → EXPENSE for Makanan & Minuman
+   - Handle typos: "makn" ? "makan", "transpot" ? "transport"
+   - Handle conversational: "tadi beli kopi 25k" ? EXPENSE
+   - Handle shorthand: "makan 50k" ? EXPENSE for Makanan & Minuman
 
 4. **Multi-action Support:**
-   - "Gaji 5jt untuk makan 2jt transport 1jt" → [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
+   - "Gaji 5jt untuk makan 2jt transport 1jt" ? [INCOME, BUDGET_ALLOCATION, BUDGET_ALLOCATION]
 
 5. **Balance Query:**
-   - "saldo", "uang saya", "cek saldo" → BALANCE_QUERY
-   - "uang free", "free cash" → BALANCE_QUERY (will show free cash)
+   - "saldo", "uang saya", "cek saldo" ? BALANCE_QUERY
+   - "uang free", "free cash" ? BALANCE_QUERY (will show free cash)
 
 6. **Unknown Handling:**
    - If unclear, return UNKNOWN with clarificationQuestion
@@ -196,3 +196,6 @@ Output: \`\`\`json
 Now parse the user's message. Return ONLY valid JSON, no explanation.`;
   }
 }
+
+
+

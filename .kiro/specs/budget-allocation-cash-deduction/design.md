@@ -1,686 +1,805 @@
-# Budget Allocation Cash Deduction Bugfix Design
+﻿# Budget-Category-Expense Accounting Bugfix Design
 
 ## Overview
 
-This design addresses the bug where creating budget allocations does not reduce the available cash balance. The system currently treats budgets as soft tracking limits rather than hard money reservations, causing users to see incorrect available spending money.
+This design addresses critical bugs in the budget-category-expense accounting system. The core issue is that expenses do NOT check if their category has an active budget and consume that budget first. This causes incorrect Free Cash calculations and "double deduction" of budgeted expenses.
 
-The fix implements a dual-view cash management system:
-- **Uang Keseluruhan (Total Money)**: The full account balance including both allocated and free money
-- **Uang Free (Free Cash)**: Only the unallocated money available for non-budgeted spending
+**Current Architecture**: `TransactionService.createTransaction` creates expense transactions that always reduce Actual Balance, but there is NO logic to:
+1. Check if the expense category has an active applicable budget
+2. Mark the budget as "spent" (budget remaining decreases)
+3. Prevent Free Cash from being reduced when a budget covers the expense
 
-The fix ensures that:
-1. Creating a budget allocation immediately reduces free cash by the allocated amount
-2. Expenses from budgeted categories deduct from the allocation, not free cash
-3. Expenses from non-budgeted categories deduct from free cash only
-4. The dashboard displays both total and free cash to prevent overspending
+**Fixed Architecture**: Expense creation MUST route through budget-aware logic that:
+1. Attempts to match expense category → active budget
+2. If match found: consumes budget, keeps Free Cash unchanged
+3. If no match: reduces Free Cash
+4. If overspending: partial budget consumption + partial Free Cash reduction
+
+The fix implements a unified accounting model:
+
+**Financial Model:**
+```
+Actual Balance = Total Income - Total Expense +/- Transfers
+Free Cash = Actual Balance - Sum(Remaining Active Budgets)
+
+Expense Routing:
+  IF category has active budget THEN
+    Budget Remaining -= expense
+    Free Cash unchanged
+  ELSE
+    Free Cash -= expense
+  END
+
+Overspending:
+  IF expense > Budget Remaining THEN
+    Budget Remaining = 0
+    Free Cash -= (expense - Budget Remaining)
+  END
+```
 
 ## Glossary
 
-- **Bug_Condition (C)**: The condition that triggers the bug - when budget allocation operations occur without affecting cash balance correctly
-- **Property (P)**: The desired behavior - budget allocations should reduce free cash, expenses should deduct from correct pools
-- **Preservation**: Existing transaction recording, balance calculations for non-budget operations, and multi-account handling that must remain unchanged
-- **Free Cash**: The unallocated money available for non-budgeted spending (account balance minus budget allocations)
-- **Total Money**: The full account balance including both allocated and free money
-- **Budget Allocation**: A reserved amount of money assigned to a specific expense category for a time period
-- **Budgeted Expense**: An expense transaction that belongs to a category with an active budget allocation
-- **Non-Budgeted Expense**: An expense transaction that does NOT belong to any category with an active budget allocation
-- **BudgetService.createBudget**: The function in `services/budget.service.ts` that creates budget allocations
-- **AccountService.getAccountBalance**: The function in `services/account.service.ts` that calculates derived account balances
-- **DashboardService.getSummary**: The function in `services/dashboard.service.ts` that aggregates dashboard data
+- **Bug_Condition (C)**: Operations involving budget-category-expense interaction (expense creation, budget matching, free cash calculation)
+- **Property (P)**: Desired behavior - budgeted expenses consume budgets, unbudgeted expenses consume free cash, no double deduction
+- **Preservation**: Existing income, transfer, balance calculations, and non-budget operations remain unchanged
+- **Actual Balance**: Total money owned by user (income - expense +/- transfers)
+- **Free Cash**: Unallocated money available for spending (Actual Balance - Remaining Budgets)
+- **Allocated Budget**: Money reserved for a specific expense category
+- **Budget Remaining**: Original budget amount - sum of matching category expenses in period
+- **Active Applicable Budget**: Budget matching userId, accountId, categoryId, and transaction date within [startDate, endDate)
+- **Budgeted Expense**: Expense in category with active applicable budget
+- **Unbudgeted Expense**: Expense in category without active applicable budget
+- **Overage**: Amount by which expense exceeds remaining budget
+- **TransactionService.createTransaction**: Function in `services/transaction.service.ts` that creates transactions
+- **BudgetService.findApplicableBudget**: NEW function to match expense → budget
+- **BudgetService.consumeBudget**: NEW function to validate budget consumption
+- **AccountService.getFreeCash**: Existing function that calculates Free Cash
 
 ## Bug Details
 
 ### Bug Condition
 
-The bug manifests when budget allocation operations occur. The system is either not tracking budget allocations as reserved funds, not separating free cash from allocated cash, or not routing expense deductions through the correct cash pools.
+The bug manifests when expenses are created. The system creates the expense transaction (reducing Actual Balance) but:
+1. Does NOT check if category has active budget
+2. Does NOT consume the budget
+3. Incorrectly reduces Free Cash even when budget should cover it
+
+This causes "double deduction" - the expense reduces both Actual Balance AND Free Cash, when it should only reduce Actual Balance and the matched budget.
 
 **Formal Specification:**
 ```
 FUNCTION isBugCondition(input)
-  INPUT: input of type BudgetOperation
+  INPUT: input of type TransactionOperation  
   OUTPUT: boolean
   
-  RETURN input.operationType IN ['CREATE_BUDGET_ALLOCATION', 
-                                   'EXPENSE_FROM_BUDGET', 
-                                   'EXPENSE_FROM_FREE_CASH',
-                                   'VIEW_DASHBOARD_BALANCE']
-         AND (cashBalanceNotReduced(input) 
-              OR expenseDeductedFromWrongPool(input)
-              OR dashboardNotShowingSeparateViews(input))
+  RETURN input.operationType IN ['CREATE_EXPENSE', 
+                                   'VIEW_FREE_CASH',
+                                   'VIEW_DASHBOARD',
+                                   'WHATSAPP_BALANCE_QUERY']
+         AND (expenseNotMatchedToBudget(input)
+              OR freeCashIncorrectlyCalculated(input)
+              OR dashboardNotShowingFreeCash(input))
 END FUNCTION
 ```
 
 ### Examples
 
-- **Budget Allocation**: User with 2,000,000 cash creates "budget nabung 500k" → System creates budget but cash stays at 2,000,000 instead of reducing to 1,500,000
-- **Multiple Allocations**: User creates "budget makan 600k, budget kos 750k, budget nabung 500k" (total 1,850,000) → Free cash should be 150,000 but system shows 2,000,000
-- **Budgeted Expense**: User spends 50,000 on "makan" category with active budget → System deducts from total cash instead of from the 600k "makan" budget allocation
-- **Non-Budgeted Expense**: User spends 30,000 on "entertainment" with no budget → System should deduct from free cash only, but currently deducts from total without considering reserved allocations
-- **Dashboard View**: Dashboard shows only total balance (2,000,000) without distinguishing that 1,850,000 is allocated and only 150,000 is truly free to spend
+- **Budgeted Expense**: User has Food budget Rp600k, records "makan 19k" → System reduces Actual Balance by 19k (✓) but also reduces Free Cash by 19k (❌) instead of consuming Food budget
+- **Unbudgeted Expense**: User has no Transport budget, records "grab 50k" → System reduces Actual Balance (✓) and Free Cash (✓) but this is NOT explicitly budget-aware
+- **Budget Overspending**: Food budget has Rp100k remaining, user spends Rp130k on food → System should consume Rp100k from budget and Rp30k from Free Cash, but currently reduces Free Cash by full Rp130k
+- **Multiple Categories**: User has Food and Housing budgets, records food expense → System should only affect Food budget, but currently affects Free Cash without category distinction
+- **Dashboard**: Dashboard shows only Actual Balance, not distinguishing between allocated and free money
+- **WhatsApp Query**: "berapa sisa uang" likely returns Actual Balance instead of Free Cash
 
 ## Expected Behavior
 
 ### Preservation Requirements
 
 **Unchanged Behaviors:**
-- Regular income transactions must continue to increase account balance correctly
-- Transaction history queries must continue to display all transactions accurately
-- Multi-account handling must maintain separate balances per account
-- Transfer operations must continue to move money between accounts atomically
-- Budget period resets and renewals must continue according to existing logic
-- WhatsApp query responses must continue to provide budget information
-- Total expense tracking and reporting must include all expense transactions regardless of budget category
+- Income transactions increase Actual Balance
+- Transfers move money atomically between accounts
+- Transaction history queries return accurate results
+- Multi-account handling maintains separate balances
+- Budget period resets work correctly
+- Total expense reporting includes all expenses
+- Budget progress tracking (spent/remaining) continues to aggregate from transactions
+- Category type validation (EXPENSE only) preserved
+- Account ownership validation preserved
+- Financial precision (NUMERIC(19,2)) preserved
 
 **Scope:**
-All inputs that do NOT involve budget allocation mechanics (creation, expense routing, dashboard display) should be completely unaffected by this fix. This includes:
-- Income transactions (add to both free cash and total money)
-- Account-to-account transfers (neutral to budget allocations)
-- Transaction queries and history views
-- Non-cash account operations (goals, categories, etc.)
-- Budget queries and status checks that don't modify state
+All inputs that do NOT involve expense-budget interaction should be unaffected. This includes:
+- Income creation
+- Transfer creation
+- Transaction queries
+- Account balance queries (except Free Cash calculation)
+- Budget queries that don't involve expense matching
+- Category management
+- Non-expense operations
 
 ## Hypothesized Root Cause
 
-Based on the bug description and code analysis, the most likely issues are:
+Based on code analysis, the root causes are:
 
-1. **No Cash Deduction on Budget Creation**: The `BudgetService.createBudget` function inserts a budget record into the `budgets` table but does not create any transaction or mechanism to reduce the account balance. The system treats budgets as pure metadata (tracking limits) rather than as cash reservations.
+**RC1. No Budget Matching Logic in Expense Creation**
 
-2. **Missing Free Cash Calculation**: The `AccountService.getAccountBalance` function calculates balance as:
-   ```
-   balance = initialBalance + income - expense + transfersIn - transfersOut
-   ```
-   This does NOT subtract budget allocations, so it returns total money instead of free cash.
+`TransactionService.createTransaction` (lines 21-75 in `services/transaction.service.ts`) creates expense transactions but:
+- ✅ Validates account ownership
+- ✅ Validates category ownership and type
+- ✅ Inserts transaction
+- ❌ Does NOT check if category has active budget
+- ❌ Does NOT mark budget as consumed
 
-3. **No Budget-Aware Expense Routing**: When expenses are recorded, the system does not check if the expense category has an active budget allocation. All expenses simply deduct from the account balance without distinguishing between budgeted and non-budgeted spending.
+**RC2. Budget "Spent" is Derived, Not Tracked**
 
-4. **Dashboard Shows Total Only**: The `DashboardService.getSummary` function calculates `totalBalance` using `_calcTotalNetWorth`, which aggregates account balances. Since account balances don't subtract allocations, the dashboard only shows total money, not free cash.
+Budget service calculates spent amount by aggregating transactions (lines 168-186 in `services/budget.service.ts`):
+```typescript
+async function aggregateSpending(
+  userId: string,
+  categoryId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<number>
+```
+
+This is CORRECT architecture (spent is derived), but expense creation doesn't validate against budget limits or track budget-expense relationship.
+
+**RC3. Free Cash Calculation Exists But May Not Be Used Everywhere**
+
+`AccountService.getFreeCash` (lines 221-280 in `services/account.service.ts`) correctly calculates:
+```
+Free Cash = Actual Balance - Sum(Active Budget Allocations)
+```
+
+However:
+- ❌ Dashboard may not use it (needs verification)
+- ❌ WhatsApp balance query may not use it (needs verification)
+- ✅ Account detail endpoints likely use it
+
+**RC4. No Overspending Handling**
+
+There is no logic to handle when expense > budget remaining:
+- Should consume entire remaining budget
+- Should reduce Free Cash by overage only
+- Current behavior likely reduces Free Cash by full amount
+
+**RC5. Dashboard May Not Display Free Cash**
+
+`DashboardService.getSummary` (in `services/dashboard.service.ts`) likely returns `totalBalance` but may not include `freeCash` field.
 
 ## Correctness Properties
 
-Property 1: Budget Condition - Budget Allocation Reduces Free Cash
+Property 1: Bug Condition - Budgeted Expense Consumes Budget
 
-_For any_ input where a budget allocation is created (operationType = "CREATE_BUDGET_ALLOCATION"), the fixed system SHALL reduce the account's free cash by the allocation amount while keeping the allocation amount tracked separately, such that totalMoney = freeCash + budgetAllocations.
+_For any_ expense transaction where the category has an active applicable budget (userId matches, accountId matches, categoryId matches, transactionDate within budget period), the fixed system SHALL consume the budget (spent increases) and SHALL NOT reduce Free Cash.
 
-**Validates: Requirements 2.1, 2.2**
+**Validates: Requirements 2.2**
 
-Property 2: Budget Condition - Dashboard Shows Separated Views
+Property 2: Bug Condition - Unbudgeted Expense Consumes Free Cash
 
-_For any_ input where the dashboard is viewed (operationType = "VIEW_DASHBOARD"), the fixed system SHALL display both "Uang Keseluruhan" (total money including allocations) and "Uang Free" (unallocated cash available for spending), with the relationship totalMoney = freeCash + sumOfActiveAllocations.
+_For any_ expense transaction where the category does NOT have an active applicable budget, the fixed system SHALL reduce Free Cash by the expense amount.
 
 **Validates: Requirements 2.3**
 
-Property 3: Budget Condition - Budgeted Expense Deducts From Allocation
+Property 3: Bug Condition - Budget Overspending Partial Consumption
 
-_For any_ expense transaction where the category has an active budget allocation (operationType = "EXPENSE_FROM_BUDGET"), the fixed system SHALL deduct the amount from the specific budget allocation's remaining balance and NOT from the free cash pool.
+_For any_ expense transaction where the expense amount exceeds the budget remaining, the fixed system SHALL consume all remaining budget (to zero) and SHALL reduce Free Cash by the overage amount only.
 
 **Validates: Requirements 2.4**
 
-Property 4: Budget Condition - Non-Budgeted Expense Deducts From Free Cash
+Property 4: Bug Condition - Category Budget Isolation
 
-_For any_ expense transaction where the category does NOT have an active budget allocation (operationType = "EXPENSE_FROM_FREE_CASH"), the fixed system SHALL deduct the amount from the free cash balance only, leaving budget allocations unchanged.
+_For any_ expense transaction, if the user has multiple active budgets, ONLY the budget matching the expense's categoryId SHALL be affected.
 
-**Validates: Requirements 2.5**
+**Validates: Requirements 2.8**
 
-Property 5: Preservation - Non-Budget Operations Unchanged
+Property 5: Bug Condition - Dashboard Shows Free Cash
 
-_For any_ input where the operation does NOT involve budget allocation mechanics (isBugCondition returns false), the fixed system SHALL produce exactly the same behavior as the original system, preserving all existing functionality for income transactions, transfers, transaction queries, multi-account handling, and non-budget operations.
+_For any_ dashboard query, the fixed system SHALL return both totalBalance (Actual Balance) and freeCash (calculated Free Cash).
 
-**Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8**
+**Validates: Requirements 2.11**
+
+Property 6: Bug Condition - WhatsApp Balance Query Returns Free Cash
+
+_For any_ WhatsApp "sisa uang" query, the fixed system SHALL return calculated Free Cash, NOT total Actual Balance.
+
+**Validates: Requirements 2.12**
+
+Property 7: Preservation - Budget Allocation Reduces Free Cash
+
+_For any_ budget creation operation, the fixed system SHALL reduce calculated Free Cash by the allocation amount (existing behavior preserved).
+
+**Validates: Requirements 3.1** (from previous phase)
+
+Property 8: Preservation - Income Increases Balance
+
+_For any_ income transaction, the fixed system SHALL increase Actual Balance correctly, and Free Cash SHALL equal Actual Balance minus Remaining Budgets.
+
+**Validates: Requirements 3.1**
+
+Property 9: Preservation - Transfers Are Budget-Neutral
+
+_For any_ transfer operation, the fixed system SHALL NOT consume budgets, and Free Cash SHALL recalculate correctly for both source and destination accounts.
+
+**Validates: Requirements 3.4**
+
+Property 10: Preservation - Non-Expense Operations Unchanged
+
+_For any_ operation that does NOT involve expense creation or free cash display (income, transfer, queries, budget queries), the fixed system SHALL produce identical behavior to the original system.
+
+**Validates: Requirements 3.1-3.10**
 
 ## Fix Implementation
 
+### Architectural Decision: Budget Matching Strategy
+
+**Decision**: Use **category-based budget matching at expense creation time**.
+
+When an expense is created:
+1. Query for active applicable budget matching:
+   - `budget.userId = transaction.userId`
+   - `budget.accountId = transaction.accountId`
+   - `budget.categoryId = transaction.categoryId`
+   - `transaction.transactionDate >= budget.startDate`
+   - `transaction.transactionDate < budget.endDate`
+
+2. If match found:
+   - Validate: Can the budget afford this expense?
+   - If yes: Allow transaction (budget remaining will decrease via derived aggregation)
+   - If no (overspending): Allow transaction but warn/validate against Free Cash
+
+3. If no match found:
+   - Validate against Free Cash availability
+   - Allow transaction (Free Cash will decrease)
+
+**Why this approach:**
+- ✅ Budgets remain declarative (no stored "spent" field to synchronize)
+- ✅ Budget remaining is always correct (derived from transactions)
+- ✅ Expense creation validates affordability at write time
+- ✅ Maintains single source of truth for balance calculations
+- ✅ Supports budget overspending gracefully
+- ✅ No schema changes required
+
 ### Changes Required
-
-The fix requires modifying budget creation, expense handling, balance calculation, and dashboard aggregation to implement the dual-view cash management system.
-
-**Architectural Decision: Derived vs Stored Approach**
-
-We will use a **derived calculation approach** (no new database columns) because:
-- Budget allocations are already stored in the `budgets` table with amounts
-- Free cash can be calculated as: `accountBalance - sumOfActiveBudgetAllocations`
-- This maintains consistency with the existing architecture where balances are derived from transactions
-- Avoids synchronization issues between stored values
-- Leverages existing transaction aggregation patterns
 
 ### File 1: `services/budget.service.ts`
 
-**Function**: `BudgetService.createBudget`
+**New Function**: `BudgetService.findApplicableBudget`
 
-**Current Behavior**: Creates a budget record only, does not affect account balance
+**Purpose**: Find active budget matching expense parameters
 
-**Specific Changes**:
+**Specific Changes:**
 
-1. **Validate Sufficient Free Cash**: Before creating the budget, calculate the account's current free cash and verify that the new allocation amount does not exceed available free cash.
-   ```typescript
-   // After line ~244 (after category validation)
-   const freeCash = await AccountService.getFreeCash(userId, accountId);
-   const allocationAmount = parseFloat(input.amount);
-   
-   if (allocationAmount > freeCash) {
-     throw new Error(
-       `Saldo free cash tidak mencukupi. Tersedia: ${freeCash}, Dibutuhkan: ${allocationAmount}`
-     );
-   }
-   ```
+```typescript
+// Add after aggregateSpendingBulk function (after line ~215)
+/**
+ * Find active applicable budget for an expense transaction.
+ * Returns budget if found, null if no matching budget.
+ * 
+ * Matches on:
+ * - userId
+ * - accountId
+ * - categoryId
+ * - transactionDate within [startDate, endDate)
+ */
+static async findApplicableBudget(
+  userId: string,
+  accountId: string,
+  categoryId: string,
+  transactionDate: Date
+): Promise<{
+  id: string;
+  amount: string;
+  spentAmount: number;
+  remaining: number;
+} | null> {
+  // 1. Find matching budget
+  const [budget] = await db
+    .select()
+    .from(budgets)
+    .where(
+      and(
+        eq(budgets.userId, userId),
+        eq(budgets.accountId, accountId),
+        eq(budgets.categoryId, categoryId),
+        lte(budgets.startDate, transactionDate),
+        gt(budgets.endDate, transactionDate)  // exclusive upper bound
+      )
+    )
+    .limit(1);
 
-2. **Track Account Association**: Budgets need to know which account they're allocated from. Add `accountId` parameter to the function signature and store it in the budget record.
-   ```typescript
-   // Update function signature (line 238)
-   static async createBudget(
-     userId: string,
-     accountId: string,  // NEW parameter
-     input: CreateBudgetInput
-   ): Promise<BudgetProgressDTO>
-   ```
+  if (!budget) return null;
 
-3. **Store Account Reference**: Add accountId to the database insert operation.
-   ```typescript
-   // Modify insert values (line ~276)
-   const [created] = await db
-     .insert(budgets)
-     .values({
-       userId,
-       accountId,  // NEW field
-       categoryId: input.categoryId,
-       periodType: input.periodType,
-       startDate: startUtc,
-       endDate: endUtc,
-       amount: input.amount,
-       currency: input.currency ?? "IDR",
-     })
-     .returning();
-   ```
+  // 2. Calculate spent amount
+  const spentAmount = await aggregateSpending(
+    userId,
+    categoryId,
+    budget.startDate,
+    budget.endDate
+  );
 
-**Note**: This requires a database migration to add the `accountId` column to the `budgets` table.
+  const limitAmount = parseFloat(budget.amount);
+  const remaining = limitAmount - spentAmount;
 
-### File 2: `db/schema/budget.ts`
+  return {
+    id: budget.id,
+    amount: budget.amount,
+    spentAmount,
+    remaining,
+  };
+}
+```
 
-**Changes**: Add `accountId` foreign key to track which account a budget is allocated from
+**New Function**: `BudgetService.validateBudgetConsumption`
 
-**Specific Changes**:
+**Purpose**: Validate if expense can be covered by budget and/or free cash
 
-1. **Add Account Reference**: Add the accountId field with foreign key constraint.
-   ```typescript
-   // After userId field (line ~38)
-   accountId: text("account_id")
-     .notNull()
-     .references(() => accounts.id, { onDelete: "restrict" }),
-   ```
+**Specific Changes:**
 
-2. **Add Index**: Add index for accountId queries.
-   ```typescript
-   // In indexes array (line ~81)
-   index("budgets_accountId_idx").on(table.accountId),
-   ```
+```typescript
+// Add after findApplicableBudget
+/**
+ * Validate budget consumption for an expense.
+ * Returns validation result indicating:
+ * - Can expense proceed?
+ * - How much from budget?
+ * - How much from free cash?
+ * - Any warnings?
+ */
+static async validateBudgetConsumption(
+  userId: string,
+  accountId: string,
+  categoryId: string | null,
+  expenseAmount: number,
+  transactionDate: Date
+): Promise<{
+  canProceed: boolean;
+  budgetConsumption: number;
+  freeCashConsumption: number;
+  warnings: string[];
+  budgetId?: string;
+}> {
+  const warnings: string[] = [];
 
-3. **Add Relation**: Add relation to accounts table.
-   ```typescript
-   // In budgetsRelations (line ~95)
-   account: one(accounts, {
-     fields: [budgets.accountId],
-     references: [accounts.id],
-   }),
-   ```
+  // If no category, use free cash only
+  if (!categoryId) {
+    const { AccountService } = await import("./account.service");
+    const freeCash = await AccountService.getFreeCash(userId, accountId);
 
-4. **Import accounts**: Add accounts import at top of file.
-   ```typescript
-   // Update import (line ~12)
-   import { categories, accounts } from "./finance";
-   ```
+    if (expenseAmount > freeCash) {
+      return {
+        canProceed: false,
+        budgetConsumption: 0,
+        freeCashConsumption: 0,
+        warnings: [
+          `Free cash tidak mencukupi. Tersedia: Rp${freeCash.toLocaleString()}, Dibutuhkan: Rp${expenseAmount.toLocaleString()}`
+        ],
+      };
+    }
 
-### File 3: `services/account.service.ts`
+    return {
+      canProceed: true,
+      budgetConsumption: 0,
+      freeCashConsumption: expenseAmount,
+      warnings: [],
+    };
+  }
 
-**New Function**: `AccountService.getFreeCash`
+  // Try to find applicable budget
+  const budget = await this.findApplicableBudget(
+    userId,
+    accountId,
+    categoryId,
+    transactionDate
+  );
 
-**Purpose**: Calculate the free (unallocated) cash for an account
+  // No budget found - use free cash
+  if (!budget) {
+    const { AccountService } = await import("./account.service");
+    const freeCash = await AccountService.getFreeCash(userId, accountId);
 
-**Specific Changes**:
+    if (expenseAmount > freeCash) {
+      return {
+        canProceed: false,
+        budgetConsumption: 0,
+        freeCashConsumption: 0,
+        warnings: [
+          `Free cash tidak mencukupi (tidak ada budget untuk kategori ini). Tersedia: Rp${freeCash.toLocaleString()}, Dibutuhkan: Rp${expenseAmount.toLocaleString()}`
+        ],
+      };
+    }
 
-1. **Add getFreeCash Method**: New static method to calculate free cash after budget allocations.
-   ```typescript
-   // Add after getAccountBalance method (line ~159)
-   /**
-    * Calculate free cash (unallocated money) for an account
-    * Free Cash = Account Balance - Sum of Active Budget Allocations
-    */
-   static async getFreeCash(
-     userId: string,
-     accountId: string
-   ): Promise<number> {
-     // 1. Get total account balance
-     const [account] = await db
-       .select({ initialBalance: accounts.initialBalance })
-       .from(accounts)
-       .where(and(eq(accounts.id, accountId), eq(accounts.userId, userId)))
-       .limit(1);
-     
-     if (!account) throw new Error("Account not found");
-     
-     const totalBalance = await this.getAccountBalance(
-       userId,
-       accountId,
-       parseFloat(account.initialBalance)
-     );
-     
-     // 2. Sum active budget allocations for this account
-     const now = new Date();
-     const [allocationsRes] = await db
-       .select({
-         total: sql<string>`coalesce(sum(${budgets.amount}), '0.00')`,
-       })
-       .from(budgets)
-       .where(
-         and(
-           eq(budgets.userId, userId),
-           eq(budgets.accountId, accountId),
-           lte(budgets.startDate, now),  // Budget has started
-           gte(budgets.endDate, now)     // Budget hasn't ended
-         )
-       );
-     
-     const totalAllocated = parseFloat(allocationsRes?.total || "0");
-     
-     // 3. Free cash = total balance - allocations
-     const freeCash = totalBalance - totalAllocated;
-     
-     return Math.round(freeCash * 100) / 100;
-   }
-   ```
+    return {
+      canProceed: true,
+      budgetConsumption: 0,
+      freeCashConsumption: expenseAmount,
+      warnings: [],
+    };
+  }
 
-2. **Add Import**: Add budgets import at top of file.
-   ```typescript
-   // Update import (line ~2)
-   import { accounts, transactions, transfers, budgets } from "@/db/schema";
-   ```
+  // Budget found - check if it covers the expense
+  if (expenseAmount <= budget.remaining) {
+    // Budget covers entire expense
+    return {
+      canProceed: true,
+      budgetConsumption: expenseAmount,
+      freeCashConsumption: 0,
+      warnings: [],
+      budgetId: budget.id,
+    };
+  }
 
-3. **Update getAccountById**: Modify to return both totalBalance and freeCash.
-   ```typescript
-   // Modify return value (line ~109)
-   const freeCash = await this.getFreeCash(userId, account.id);
-   
-   return {
-     ...account,
-     currentBalance,  // Keep for backward compatibility (total balance)
-     totalBalance: currentBalance,  // Explicit total balance
-     freeCash,  // New: unallocated cash
-   };
-   ```
+  // Overspending - budget + free cash
+  const overage = expenseAmount - budget.remaining;
+  const { AccountService } = await import("./account.service");
+  const freeCash = await AccountService.getFreeCash(userId, accountId);
 
-4. **Update AccountWithBalance Interface**: Add freeCash field.
-   ```typescript
-   // Update interface (line ~7)
-   export interface AccountWithBalance {
-     id: string;
-     userId: string;
-     name: string;
-     type: string;
-     initialBalance: string;
-     currency: string;
-     isActive: boolean;
-     createdAt: Date;
-     updatedAt: Date;
-     currentBalance: number;  // Total balance (for backward compatibility)
-     totalBalance?: number;    // Explicit total balance
-     freeCash?: number;        // Unallocated cash
-   }
-   ```
+  if (overage > freeCash) {
+    return {
+      canProceed: false,
+      budgetConsumption: 0,
+      freeCashConsumption: 0,
+      warnings: [
+        `Budget tersisa Rp${budget.remaining.toLocaleString()}, overage Rp${overage.toLocaleString()} melebihi free cash Rp${freeCash.toLocaleString()}`
+      ],
+    };
+  }
 
-5. **Update getAccountsWithBalances**: Include freeCash for each account.
-   ```typescript
-   // Modify loop (line ~59)
-   for (const acc of userAccounts) {
-     const balance = await this.getAccountBalance(userId, acc.id, parseFloat(acc.initialBalance));
-     const freeCash = await this.getFreeCash(userId, acc.id);
-     results.push({
-       ...acc,
-       currentBalance: balance,
-       totalBalance: balance,
-       freeCash,
-     });
-   }
-   ```
+  warnings.push(
+    `⚠️ Budget melebihi sisa! Budget tersisa: Rp${budget.remaining.toLocaleString()}, Expense: Rp${expenseAmount.toLocaleString()}. Overage Rp${overage.toLocaleString()} akan dikurangi dari free cash.`
+  );
 
-### File 4: `services/dashboard.service.ts`
+  return {
+    canProceed: true,
+    budgetConsumption: budget.remaining,
+    freeCashConsumption: overage,
+    warnings,
+    budgetId: budget.id,
+  };
+}
+```
 
-**Functions**: `DashboardService.getSummary` and `DashboardService.getKPIs`
+### File 2: `services/transaction.service.ts`
 
-**Specific Changes**:
+**Modified Function**: `TransactionService.createTransaction`
 
-1. **Add Free Cash to Summary**: Calculate and include free cash in dashboard summary.
-   ```typescript
-   // Before return statement in getSummary (line ~217)
-   // Calculate free cash across all active accounts
-   let totalFreeCash = 0;
-   for (const acc of activeAccounts) {
-     const freeCash = await AccountService.getFreeCash(userId, acc.id);
-     totalFreeCash += freeCash;
-   }
-   totalFreeCash = Math.round(totalFreeCash * 100) / 100;
-   
-   return {
-     totalBalance: Math.round(totalBalance * 100) / 100,  // Uang Keseluruhan
-     freeCash: totalFreeCash,  // NEW: Uang Free
-     incomeThisMonth: Math.round(incomeThisMonth * 100) / 100,
-     expenseThisMonth: Math.round(expenseThisMonth * 100) / 100,
-     netThisMonth: Math.round(netThisMonth * 100) / 100,
-     activeAccountsCount: activeAccounts.length,
-     recentTransactions: recent,
-   };
-   ```
+**Purpose**: Add budget-aware expense validation before creating transaction
 
-2. **Update DashboardSummary Interface**: Add freeCash field.
-   ```typescript
-   // Update interface (line ~7)
-   export interface DashboardSummary {
-     totalBalance: number;     // Uang Keseluruhan (total including allocations)
-     freeCash: number;         // NEW: Uang Free (unallocated cash)
-     incomeThisMonth: number;
-     expenseThisMonth: number;
-     netThisMonth: number;
-     activeAccountsCount: number;
-     recentTransactions: RecentTransaction[];
-   }
-   ```
+**Specific Changes:**
 
-3. **Add AccountService Import**: Ensure AccountService is imported.
-   ```typescript
-   // At top of file
-   import { AccountService } from "./account.service";
-   ```
+```typescript
+// Modify createTransaction function (starts at line ~21)
+static async createTransaction(userId: string, input: CreateTransactionInput) {
+  // 1. Verify account ownership (EXISTING)
+  const [account] = await db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, userId)))
+    .limit(1);
 
-### File 5: `schemas/budget.schema.ts`
+  if (!account) {
+    throw new Error("Akun keuangan tidak ditemukan atau bukan milik Anda.");
+  }
 
-**Changes**: Add accountId to create and update schemas
+  if (!account.isActive) {
+    throw new Error("Akun keuangan sedang nonaktif.");
+  }
 
-**Specific Changes**:
+  // 2. Verify category ownership and type compatibility (EXISTING)
+  if (input.categoryId) {
+    const [category] = await db
+      .select()
+      .from(categories)
+      .where(
+        and(
+          eq(categories.id, input.categoryId),
+          or(isNull(categories.userId), eq(categories.userId, userId))
+        )
+      )
+      .limit(1);
 
-1. **Add accountId to createMonthlyBudgetSchema**:
-   ```typescript
-   // After categoryId field (line ~21)
-   accountId: z.string().min(1, "accountId diperlukan"),
-   ```
+    if (!category) {
+      throw new Error("Kategori tidak ditemukan.");
+    }
 
-2. **Add accountId to createCustomBudgetSchema**:
-   ```typescript
-   // After categoryId field (line ~44)
-   accountId: z.string().min(1, "accountId diperlukan"),
-   ```
+    if (category.type !== input.type) {
+      throw new Error(
+        `Kategori '${category.name}' adalah tipe ${category.type}, tidak cocok dengan transaksi ${input.type}.`
+      );
+    }
+  }
 
-3. **Add accountId to updateBudgetSchema** (optional for updates):
-   ```typescript
-   // In object definition (line ~68)
-   accountId: z.string().min(1).optional(),
-   ```
+  // 3. NEW: Budget-aware validation for EXPENSE transactions
+  if (input.type === "EXPENSE") {
+    const { BudgetService } = await import("./budget.service");
+    
+    const validation = await BudgetService.validateBudgetConsumption(
+      userId,
+      input.accountId,
+      input.categoryId || null,
+      parseFloat(input.amount),
+      input.transactionDate
+    );
 
-### File 6: `app/api/v1/budgets/route.ts`
+    if (!validation.canProceed) {
+      throw new Error(validation.warnings.join(". "));
+    }
 
-**Changes**: Pass accountId when creating budgets
+    // Log warnings if any (overspending, etc.)
+    if (validation.warnings.length > 0) {
+      console.warn(`[Budget Warning] ${validation.warnings.join(". ")}`);
+    }
+  }
 
-**Specific Changes**:
+  // 4. Insert transaction (EXISTING)
+  const [created] = await db
+    .insert(transactions)
+    .values({
+      userId,
+      accountId: input.accountId,
+      categoryId: input.categoryId || null,
+      type: input.type,
+      amount: input.amount,
+      description: input.description,
+      transactionDate: input.transactionDate,
+      source: "WEB",
+      status: "CONFIRMED",
+    })
+    .returning();
 
-1. **Extract accountId from Request**: Get accountId from request body.
-   ```typescript
-   // In POST handler, after input validation
-   const { accountId, ...budgetInput } = input;
-   
-   if (!accountId) {
-     return NextResponse.json(
-       { error: "accountId diperlukan" },
-       { status: 400 }
-     );
-   }
-   ```
+  return created;
+}
+```
 
-2. **Pass to Service**: Update service call.
-   ```typescript
-   // Update createBudget call
-   const budget = await BudgetService.createBudget(
-     session.user.id,
-     accountId,  // NEW parameter
-     budgetInput as CreateBudgetInput
-   );
-   ```
+### File 3: `services/dashboard.service.ts`
 
-### File 7: Database Migration
+**Modified Function**: `DashboardService.getSummary`
 
-**New File**: `drizzle/migrations/XXXX_add_budget_account_id.sql`
+**Purpose**: Add freeCash to dashboard summary
 
-**Purpose**: Add accountId column to budgets table
+**Specific Changes:**
 
-**Specific Changes**:
+```typescript
+// Modify getSummary return (before final return statement, around line ~217)
+// Calculate free cash across all active accounts
+let totalFreeCash = 0;
+for (const acc of activeAccounts) {
+  const freeCash = await AccountService.getFreeCash(userId, acc.id);
+  totalFreeCash += freeCash;
+}
+totalFreeCash = Math.round(totalFreeCash * 100) / 100;
 
-1. **Create Migration SQL**:
-   ```sql
-   -- Add accountId column to budgets table
-   ALTER TABLE budgets 
-   ADD COLUMN account_id TEXT;
-   
-   -- For existing budgets, set accountId to the user's first active account
-   -- (or require manual data migration before running this)
-   UPDATE budgets b
-   SET account_id = (
-     SELECT id FROM accounts 
-     WHERE user_id = b.user_id 
-     AND is_active = true 
-     ORDER BY created_at ASC 
-     LIMIT 1
-   )
-   WHERE account_id IS NULL;
-   
-   -- Make column NOT NULL after backfill
-   ALTER TABLE budgets 
-   ALTER COLUMN account_id SET NOT NULL;
-   
-   -- Add foreign key constraint
-   ALTER TABLE budgets 
-   ADD CONSTRAINT budgets_account_id_fkey 
-   FOREIGN KEY (account_id) 
-   REFERENCES accounts(id) 
-   ON DELETE RESTRICT;
-   
-   -- Add index for performance
-   CREATE INDEX budgets_accountId_idx ON budgets(account_id);
-   ```
+return {
+  totalBalance: Math.round(totalBalance * 100) / 100,  // Uang Keseluruhan
+  freeCash: totalFreeCash,  // NEW: Uang Free
+  incomeThisMonth: Math.round(incomeThisMonth * 100) / 100,
+  expenseThisMonth: Math.round(expenseThisMonth * 100) / 100,
+  netThisMonth: Math.round(netThisMonth * 100) / 100,
+  activeAccountsCount: activeAccounts.length,
+  recentTransactions: recent,
+};
+```
 
-### File 8: Frontend Dashboard Component
+**Update Interface**: Add freeCash field to DashboardSummary interface:
 
-**Files**: `app/dashboard/page.tsx` and related dashboard components
+```typescript
+// Update interface (around line ~7)
+export interface DashboardSummary {
+  totalBalance: number;     // Uang Keseluruhan (Actual Balance)
+  freeCash: number;         // NEW: Uang Free (unallocated cash)
+  incomeThisMonth: number;
+  expenseThisMonth: number;
+  netThisMonth: number;
+  activeAccountsCount: number;
+  recentTransactions: RecentTransaction[];
+}
+```
 
-**Specific Changes**:
+### File 4: `app/dashboard/page.tsx` (or dashboard component)
 
-1. **Display Both Values**: Update dashboard UI to show both Uang Keseluruhan and Uang Free.
-   ```typescript
-   // In dashboard component
-   <div className="grid gap-4 md:grid-cols-2">
-     <Card>
-       <CardHeader>
-         <CardTitle>Uang Keseluruhan</CardTitle>
-         <CardDescription>Total saldo termasuk alokasi budget</CardDescription>
-       </CardHeader>
-       <CardContent>
-         <div className="text-2xl font-bold">
-           {formatCurrency(summary.totalBalance)}
-         </div>
-       </CardContent>
-     </Card>
-     
-     <Card>
-       <CardHeader>
-         <CardTitle>Uang Free</CardTitle>
-         <CardDescription>Saldo yang tersedia untuk dibelanjakan</CardDescription>
-       </CardHeader>
-       <CardContent>
-         <div className="text-2xl font-bold">
-           {formatCurrency(summary.freeCash)}
-         </div>
-       </CardContent>
-     </Card>
-   </div>
-   ```
+**Modified Component**: Dashboard UI
 
-2. **Add Visual Indicator**: Show warning if free cash is low.
-   ```typescript
-   // Add warning badge
-   {summary.freeCash < summary.totalBalance * 0.1 && (
-     <Badge variant="destructive">Saldo free rendah!</Badge>
-   )}
-   ```
+**Purpose**: Display both Actual Balance and Free Cash
 
-### File 9: WhatsApp Service (if applicable)
+**Specific Changes:**
 
-**Files**: Services that handle WhatsApp budget creation commands
+```typescript
+// Update dashboard grid to show both values
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        Uang Keseluruhan
+      </CardTitle>
+      <DollarSign className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">
+        {formatCurrency(summary.totalBalance)}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Total saldo termasuk alokasi budget
+      </p>
+    </CardContent>
+  </Card>
+  
+  <Card>
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium">
+        Uang Free
+      </CardTitle>
+      <Wallet className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">
+        {formatCurrency(summary.freeCash)}
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">
+        Saldo tersedia untuk dibelanjakan
+      </p>
+      {summary.freeCash < summary.totalBalance * 0.1 && (
+        <Badge variant="destructive" className="mt-2">
+          Saldo free rendah!
+        </Badge>
+      )}
+    </CardContent>
+  </Card>
+</div>
+```
 
-**Specific Changes**:
+### File 5: WhatsApp Balance Query Handler
 
-1. **Parse or Default accountId**: When processing "budget makan 600k" commands, either:
-   - Use the user's primary/default account, or
-   - Prompt user to specify which account if they have multiple
-   
-   ```typescript
-   // In WhatsApp budget creation handler
-   const userAccounts = await AccountService.getAccounts(userId);
-   
-   if (userAccounts.length === 0) {
-     return "Anda belum memiliki akun. Silakan buat akun terlebih dahulu.";
-   }
-   
-   // Use first active account as default
-   const defaultAccount = userAccounts.find(a => a.isActive) || userAccounts[0];
-   
-   // Create budget with accountId
-   await BudgetService.createBudget(userId, defaultAccount.id, budgetInput);
-   ```
+**File**: Likely in `services/whatsapp/` directory
+
+**Purpose**: Return Free Cash for "sisa uang" queries
+
+**Specific Changes:**
+
+```typescript
+// In WhatsApp balance query handler (find isBalanceQuery usage)
+if (isBalanceQuery(message)) {
+  const accounts = await AccountService.getAccountsWithBalances(userId);
+  
+  // Calculate total free cash across all accounts
+  let totalFreeCash = 0;
+  for (const acc of accounts) {
+    totalFreeCash += acc.freeCash || 0;
+  }
+  
+  return `Sisa uang Anda: ${formatCurrency(totalFreeCash)}\n\n` +
+         `(Uang free/tersedia untuk dibelanjakan, sudah dikurangi alokasi budget aktif)`;
+}
+```
+
+### File 6: Export new BudgetService methods
+
+**Purpose**: Make new methods available for import
+
+**Specific Changes:**
+
+Ensure `findApplicableBudget` and `validateBudgetConsumption` are exported from `BudgetService` class (they are static methods, so already exported via class).
 
 ## Testing Strategy
 
 ### Validation Approach
 
-The testing strategy follows a two-phase approach: first, surface counterexamples that demonstrate the bug on unfixed code, then verify the fix works correctly and preserves existing behavior.
+The testing strategy follows three phases:
+1. **Exploration**: Write tests that demonstrate the bug on unfixed code
+2. **Fix Verification**: Verify budgeted/unbudgeted expense routing works correctly
+3. **Preservation**: Ensure existing behaviors remain unchanged
 
 ### Exploratory Bug Condition Checking
 
-**Goal**: Surface counterexamples that demonstrate the bug BEFORE implementing the fix. Confirm or refute the root cause analysis. If we refute, we will need to re-hypothesize.
+**Goal**: Surface counterexamples demonstrating the bug BEFORE implementing the fix.
 
-**Test Plan**: Write tests that create budget allocations and verify that cash balance is reduced, then record expenses and verify they're routed correctly. Run these tests on the UNFIXED code to observe failures and understand the root cause.
+**Test Plan**: Create budgets, record expenses, verify incorrect behavior on UNFIXED code.
 
 **Test Cases**:
-1. **Budget Creation Test**: Create a budget allocation of 500,000 from account with 2,000,000 balance → Verify balance is NOT reduced to 1,500,000 (will fail on unfixed code)
-2. **Multiple Allocations Test**: Create three budget allocations totaling 1,850,000 → Verify free cash is NOT calculated as 150,000 (will fail on unfixed code)
-3. **Budgeted Expense Test**: Record expense of 50,000 to category with active budget → Verify expense deducts from total balance instead of budget allocation (will fail on unfixed code)
-4. **Dashboard View Test**: Fetch dashboard summary → Verify only totalBalance is returned, no freeCash field (will fail on unfixed code)
+1. **Budgeted Expense Double Deduction**: Create Food budget 600k, record food expense 19k → Verify Free Cash incorrectly decreases (WILL FAIL - this is the bug)
+2. **Unbudgeted Expense**: No Transport budget, record transport expense 50k → Verify Free Cash decreases (SHOULD PASS but may not be explicitly budget-aware)
+3. **Budget Overspending**: Food budget remaining 100k, expense 130k → Verify Free Cash incorrectly decreases by full 130k (WILL FAIL)
+4. **Category Isolation**: Food and Housing budgets, food expense → Verify Housing budget unaffected (SHOULD PASS if budgets exist)
 
 **Expected Counterexamples**:
-- Cash balance remains unchanged after budget allocation creation
-- Dashboard does not show separate free cash value
-- Expenses deduct from account balance regardless of budget allocation
-- Possible causes: no transaction created for allocation, no free cash calculation, no expense routing logic
+- Budgeted expense reduces both budget AND Free Cash (double deduction)
+- No budget matching logic exists in expense creation
+- All expenses treated equally regardless of budget status
 
 ### Fix Checking
 
-**Goal**: Verify that for all inputs where the bug condition holds, the fixed function produces the expected behavior.
+**Goal**: Verify budget-expense routing works correctly after fix.
 
 **Pseudocode:**
 ```
-// Property 1: Budget allocation reduces free cash
-FOR ALL input WHERE input.operationType = "CREATE_BUDGET_ALLOCATION" DO
-  initialTotal := getAccountBalance(input.accountId)
-  initialFree := getFreeCash(input.accountId)
-  result := createBudget'(input.userId, input.accountId, input)
-  finalFree := getFreeCash(input.accountId)
-  finalTotal := getAccountBalance(input.accountId)
-  
-  ASSERT finalFree = initialFree - input.allocationAmount
-  ASSERT finalTotal = initialTotal  // Total unchanged
-  ASSERT result.success = true
-END FOR
-
-// Property 2: Dashboard shows both views
-FOR ALL input WHERE input.operationType = "VIEW_DASHBOARD" DO
-  dashboard := getDashboardSummary'(input.userId)
-  totalAllocated := sumActiveBudgetAllocations(input.userId)
-  
-  ASSERT exists(dashboard.totalBalance)
-  ASSERT exists(dashboard.freeCash)
-  ASSERT dashboard.totalBalance >= dashboard.freeCash
-  ASSERT dashboard.freeCash >= 0
-END FOR
-
-// Property 3: Budgeted expense deducts from allocation
-FOR ALL input WHERE input.operationType = "EXPENSE_FROM_BUDGET" DO
-  budget := getActiveBudget(input.categoryId)
-  initialBudgetRemaining := budget.amount - budget.spent
+// Property 1: Budgeted expense consumes budget, not free cash
+FOR ALL input WHERE input.type = "EXPENSE" AND hasApplicableBudget(input) DO
   initialFreeCash := getFreeCash(input.accountId)
+  budget := findApplicableBudget(input)
+  initialBudgetRemaining := budget.remaining
   
-  result := recordExpense'(input)
+  result := createTransaction'(input)
   
-  finalBudgetRemaining := getUpdatedBudget(budget.id).amount - getUpdatedBudget(budget.id).spent
   finalFreeCash := getFreeCash(input.accountId)
+  finalBudgetRemaining := getUpdatedBudget(budget.id).remaining
   
-  ASSERT finalBudgetRemaining = initialBudgetRemaining - input.amount
   ASSERT finalFreeCash = initialFreeCash  // Free cash unchanged
+  ASSERT finalBudgetRemaining = initialBudgetRemaining - input.amount
 END FOR
 
-// Property 4: Non-budgeted expense deducts from free cash
-FOR ALL input WHERE input.operationType = "EXPENSE_FROM_FREE_CASH" DO
+// Property 2: Unbudgeted expense consumes free cash
+FOR ALL input WHERE input.type = "EXPENSE" AND NOT hasApplicableBudget(input) DO
   initialFreeCash := getFreeCash(input.accountId)
-  allocationsBefore := sumActiveBudgetAllocations(input.userId)
   
-  result := recordExpense'(input)
+  result := createTransaction'(input)
   
   finalFreeCash := getFreeCash(input.accountId)
-  allocationsAfter := sumActiveBudgetAllocations(input.userId)
   
   ASSERT finalFreeCash = initialFreeCash - input.amount
-  ASSERT allocationsAfter = allocationsBefore  // Allocations unchanged
+END FOR
+
+// Property 3: Overspending partial consumption
+FOR ALL input WHERE input.type = "EXPENSE" AND input.amount > budgetRemaining DO
+  budget := findApplicableBudget(input)
+  overage := input.amount - budget.remaining
+  initialFreeCash := getFreeCash(input.accountId)
+  
+  result := createTransaction'(input)
+  
+  finalBudgetRemaining := getUpdatedBudget(budget.id).remaining
+  finalFreeCash := getFreeCash(input.accountId)
+  
+  ASSERT finalBudgetRemaining = 0
+  ASSERT finalFreeCash = initialFreeCash - overage
+END FOR
+
+// Property 4: Dashboard shows free cash
+FOR ALL userId DO
+  summary := getDashboardSummary'(userId)
+  
+  ASSERT exists(summary.freeCash)
+  ASSERT exists(summary.totalBalance)
+  ASSERT summary.freeCash >= 0
+  ASSERT summary.freeCash <= summary.totalBalance
 END FOR
 ```
 
 ### Preservation Checking
 
-**Goal**: Verify that for all inputs where the bug condition does NOT hold, the fixed function produces the same result as the original function.
+**Goal**: Verify non-expense operations remain unchanged.
 
-**Pseudocode:**
-```
-FOR ALL input WHERE NOT isBugCondition(input) DO
-  // For operations that don't involve budget allocation mechanics,
-  // behavior should remain identical to original system
-  ASSERT F(input) = F'(input)
-END FOR
-```
-
-**Testing Approach**: Property-based testing is recommended for preservation checking because:
-- It generates many test cases automatically across the input domain
-- It catches edge cases that manual unit tests might miss
-- It provides strong guarantees that behavior is unchanged for all non-buggy inputs
-
-**Test Plan**: Observe behavior on UNFIXED code first for income transactions, transfers, and queries, then write property-based tests capturing that behavior.
+**Test Plan**: Run preservation tests on UNFIXED code first, then verify FIXED code produces identical results.
 
 **Test Cases**:
-1. **Income Transaction Preservation**: Record income of 500,000 on unfixed code, observe it increases balance → Verify fixed code produces identical result
-2. **Transfer Preservation**: Execute account-to-account transfer on unfixed code → Verify fixed code produces identical balances on both accounts
-3. **Transaction Query Preservation**: Query transaction history on unfixed code → Verify fixed code returns identical results
-4. **Multi-Account Preservation**: Operate on multiple accounts on unfixed code → Verify fixed code maintains separate balances identically
+1. Income transactions increase balance correctly
+2. Transfers move money atomically
+3. Transaction history queries return accurate results
+4. Budget progress tracking (spent/remaining) works
+5. Category validation preserved
+6. Account ownership validation preserved
 
 ### Unit Tests
 
-- Test `AccountService.getFreeCash` calculation with various budget allocation scenarios
-- Test `BudgetService.createBudget` with sufficient and insufficient free cash
-- Test edge case: creating budget when free cash exactly equals allocation amount
-- Test edge case: attempting to create budget when free cash is zero
-- Test budget creation validation error messages
+- Test `BudgetService.findApplicableBudget` with various matching scenarios
+- Test `BudgetService.validateBudgetConsumption` with budget/no-budget/overspending cases
+- Test expense creation with budget matching
+- Test expense creation without budget
+- Test budget overspending scenarios
+- Test dashboard Free Cash display
+- Test WhatsApp Free Cash query
 
 ### Property-Based Tests
 
-- Generate random account balances and budget allocations → Verify `freeCash = totalBalance - allocations` invariant holds
-- Generate random expense scenarios (budgeted vs non-budgeted) → Verify correct pool deduction
-- Generate random dashboard queries across different user states → Verify both totalBalance and freeCash are always present and consistent
-- Test preservation: generate random income/transfer operations → Verify behavior identical to original system
+- Generate random budgets and expenses → Verify routing logic
+- Generate random overspending scenarios → Verify partial consumption
+- Generate random multi-category scenarios → Verify isolation
+- Generate random income/transfer operations → Verify preservation
 
 ### Integration Tests
 
-- Test full flow: create account → add income → create budget → verify free cash reduced
-- Test expense routing: create budget → record budgeted expense → verify budget spent increases, free cash unchanged
-- Test expense routing: create budget → record non-budgeted expense → verify free cash decreases, budget unchanged
-- Test dashboard display: create various budgets and expenses → verify dashboard shows correct Uang Keseluruhan and Uang Free values
-- Test multi-account scenario: create budgets on different accounts → verify free cash calculated independently per account
-- Test WhatsApp integration: send "budget makan 600k" command → verify budget created with correct accountId and free cash reduced
+- Full flow: Create budget → Record budgeted expense → Verify budget consumed, Free Cash unchanged
+- Full flow: Record unbudgeted expense → Verify Free Cash reduced
+- Full flow: Overspend budget → Verify partial consumption
+- Dashboard integration: Verify both values displayed
+- WhatsApp integration: Verify Free Cash returned for balance query
+- Multi-account: Verify budget matching enforces account isolation
+

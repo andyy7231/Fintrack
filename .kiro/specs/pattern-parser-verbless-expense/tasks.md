@@ -8,7 +8,7 @@ This plan implements support for verbless Indonesian expense commands (e.g., "ma
 
 ## Tasks
 
-- [-] 1. Write bug condition exploration test
+- [x] 1. Write bug condition exploration test
   - **Property 1: Bug Condition** - Verbless Expense Commands Fail to Parse
   - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
   - **DO NOT attempt to fix the test or the code when it fails**

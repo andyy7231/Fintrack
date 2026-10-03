@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { BudgetService } from "@/services/budget.service";
 import { CategoryService } from "@/services/category.service";
+import { AccountService } from "@/services/account.service";
 import { AppHeader } from "@/components/navigation/app-header";
 import { BudgetsClient } from "./budgets-client";
 
@@ -13,7 +14,7 @@ export default async function BudgetsPage() {
 
   const { user } = sessionData;
 
-  const [rawBudgets, expenseCategories] = await Promise.all([
+  const [rawBudgets, expenseCategories, accountsList] = await Promise.all([
     BudgetService.listBudgets(user.id).catch((err) => {
       console.error("Failed to list budgets:", err);
       return [];
@@ -22,9 +23,16 @@ export default async function BudgetsPage() {
       console.error("Failed to get categories:", err);
       return [];
     }),
+    AccountService.getAccountsWithBalances(user.id).catch((err) => {
+      console.error("Failed to get accounts:", err);
+      return [];
+    }),
   ]);
 
+  const activeAccounts = accountsList.filter((a) => a.isActive);
+
   const budgets = JSON.parse(JSON.stringify(rawBudgets));
+  const accounts = JSON.parse(JSON.stringify(activeAccounts));
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
@@ -41,8 +49,10 @@ export default async function BudgetsPage() {
         <BudgetsClient
           initialBudgets={budgets}
           expenseCategories={expenseCategories}
+          accounts={accounts}
         />
       </main>
     </div>
   );
 }
+

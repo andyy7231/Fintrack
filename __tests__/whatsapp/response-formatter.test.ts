@@ -399,7 +399,179 @@ describe("formatBatchSuccess", () => {
 // ─── Confirmation Prompts ─────────────────────────────────────────────────────
 
 describe("formatConfirmation", () => {
-  test("single expense — contains all required fields", () => {
+  // ── Expense ────────────────────────────────────────────────────────────────
+
+  test("expense: header is '📝 Konfirmasi Pengeluaran'", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Konfirmasi Pengeluaran");
+    expect(msg).not.toContain("Konfirmasi transaksi");
+  });
+
+  test("expense: Nominal field shows Rp amount (no space after Rp)", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Nominal: Rp5.000");
+  });
+
+  test("expense: categoryName shown as Kategori (not description)", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Kategori: Makanan & Minuman");
+    // description is different from categoryName — both must appear
+    expect(msg).toContain("Keterangan: makan");
+  });
+
+  test("expense: accountName shown in Akun field", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Transportasi",
+      amount: 10000,
+      description: "bensin",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Akun: Kas");
+  });
+
+  test("expense: footer contains YA and BATAL", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("YA");
+    expect(msg).toContain("BATAL");
+  });
+
+  test("expense: null categoryName falls back to 'Lainnya'", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: null,
+      amount: 5000,
+      description: "lain-lain",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Kategori: Lainnya");
+  });
+
+  // Required example from spec: makan 5k
+  test("REQUIRED EXAMPLE: makan 5k — Makanan & Minuman / makan / Kas / Rp5.000 / YA / BATAL", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Makanan & Minuman");
+    expect(msg).toContain("makan");
+    expect(msg).toContain("Kas");
+    expect(msg).toContain("Rp5.000");
+    expect(msg).toContain("YA");
+    expect(msg).toContain("BATAL");
+  });
+
+  // ── Income ─────────────────────────────────────────────────────────────────
+
+  test("income: header is '📝 Konfirmasi Pemasukan'", () => {
+    const msg = formatConfirmation([{
+      type: "INCOME",
+      categoryName: "Gaji",
+      amount: 5000000,
+      description: "gaji",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Konfirmasi Pemasukan");
+    expect(msg).not.toContain("Konfirmasi transaksi");
+  });
+
+  test("income: Nominal, Kategori, Keterangan, Akun all present", () => {
+    const msg = formatConfirmation([{
+      type: "INCOME",
+      categoryName: "Gaji",
+      amount: 5000000,
+      description: "gaji",
+      accountName: "Kas",
+    }]);
+    expect(msg).toContain("Nominal: Rp5.000.000");
+    expect(msg).toContain("Kategori: Gaji");
+    expect(msg).toContain("Keterangan: gaji");
+    expect(msg).toContain("Akun: Kas");
+  });
+
+  test("income: null categoryName falls back to 'Pemasukan Lain'", () => {
+    const msg = formatConfirmation([{
+      type: "INCOME",
+      categoryName: null,
+      amount: 100000,
+      description: "hadiah",
+      accountName: "BCA",
+    }]);
+    expect(msg).toContain("Kategori: Pemasukan Lain");
+  });
+
+  // ── Transfer ───────────────────────────────────────────────────────────────
+
+  test("transfer: header is '📝 Konfirmasi Transfer'", () => {
+    const msg = formatConfirmation([{
+      type: "TRANSFER",
+      categoryName: null,
+      amount: 100000,
+      description: "Transfer BCA ke GoPay",
+      fromAccountName: "Kas",
+      toAccountName: "BCA",
+    }]);
+    expect(msg).toContain("Konfirmasi Transfer");
+    expect(msg).not.toContain("Konfirmasi transaksi");
+  });
+
+  test("transfer: shows Nominal, Dari, Ke", () => {
+    const msg = formatConfirmation([{
+      type: "TRANSFER",
+      categoryName: null,
+      amount: 100000,
+      description: "Transfer",
+      fromAccountName: "Kas",
+      toAccountName: "BCA",
+    }]);
+    expect(msg).toContain("Nominal: Rp100.000");
+    expect(msg).toContain("Dari: Kas");
+    expect(msg).toContain("Ke: BCA");
+  });
+
+  test("transfer: footer contains YA and BATAL", () => {
+    const msg = formatConfirmation([{
+      type: "TRANSFER",
+      categoryName: null,
+      amount: 50000,
+      description: "Transfer",
+      fromAccountName: "BCA",
+      toAccountName: "GoPay",
+    }]);
+    expect(msg).toContain("YA");
+    expect(msg).toContain("BATAL");
+  });
+
+  // ── Encoding ───────────────────────────────────────────────────────────────
+
+  test("bullet character is U+2022 (•) not HTML entity or mojibake", () => {
     const msg = formatConfirmation([{
       type: "EXPENSE",
       categoryName: "Makanan & Minuman",
@@ -407,30 +579,55 @@ describe("formatConfirmation", () => {
       description: "makan siang",
       accountName: "BCA",
     }]);
-    expect(msg).toContain("📝 Konfirmasi transaksi");
-    expect(msg).toContain("Pengeluaran: Rp25.000");
-    expect(msg).toContain("Makanan & Minuman");
-    expect(msg).toContain("makan siang");
-    expect(msg).toContain("BCA");
-    expect(msg).toContain("*YA*");
-    expect(msg).toContain("*BATAL*");
+    expect(msg).toContain("\u2022"); // literal •
+    expect(msg).not.toContain("&bull;");
+    expect(msg).not.toContain("â€¢");
+    expect(msg).not.toContain("&#8226;");
   });
 
-  test("single transfer — shows from/to accounts", () => {
+  test("no mojibake sequences in any confirmation type", () => {
+    const MOJIBAKE = ["â€¢", "âœ…", "Ã", "\u00e2\u0080"];
+    const cases = [
+      formatConfirmation([{ type: "EXPENSE", categoryName: "Makanan & Minuman", amount: 5000, description: "makan", accountName: "Kas" }]),
+      formatConfirmation([{ type: "INCOME", categoryName: "Gaji", amount: 5000000, description: "gaji", accountName: "BCA" }]),
+      formatConfirmation([{ type: "TRANSFER", categoryName: null, amount: 100000, description: "tf", fromAccountName: "BCA", toAccountName: "GoPay" }]),
+    ];
+    for (const msg of cases) {
+      for (const mj of MOJIBAKE) {
+        expect(msg).not.toContain(mj);
+      }
+    }
+  });
+
+  // ── Rupiah format ──────────────────────────────────────────────────────────
+
+  test("amount: Rp5.000 (no space after Rp, dot thousands)", () => {
     const msg = formatConfirmation([{
-      type: "TRANSFER",
-      categoryName: null,
-      amount: 100000,
-      description: "Transfer BCA ke GoPay",
-      fromAccountName: "BCA",
-      toAccountName: "GoPay",
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
     }]);
-    expect(msg).toContain("BCA");
-    expect(msg).toContain("GoPay");
-    expect(msg).toContain("Rp100.000");
+    expect(msg).toContain("Rp5.000");
+    expect(msg).not.toMatch(/Rp\s\d/);
+    expect(msg).not.toContain("IDR");
   });
 
-  test("multi-action — shows count and total", () => {
+  test("amount: Rp5.000.000 for large values", () => {
+    const msg = formatConfirmation([{
+      type: "INCOME",
+      categoryName: "Gaji",
+      amount: 5000000,
+      description: "gaji",
+      accountName: "BCA",
+    }]);
+    expect(msg).toContain("Rp5.000.000");
+  });
+
+  // ── Multi-action (regression) ──────────────────────────────────────────────
+
+  test("multi-action: shows count and total", () => {
     const msg = formatConfirmation([
       { type: "EXPENSE", categoryName: "Makanan & Minuman", amount: 25000, description: "makan" },
       { type: "EXPENSE", categoryName: "Transportasi", amount: 20000, description: "bensin" },
@@ -439,6 +636,14 @@ describe("formatConfirmation", () => {
     expect(msg).toContain("Total pengeluaran: Rp45.000");
     expect(msg).toContain("*YA*");
     expect(msg).toContain("*BATAL*");
+  });
+
+  test("multi-action: header is 'Konfirmasi transaksi' (not type-specific)", () => {
+    const msg = formatConfirmation([
+      { type: "EXPENSE", categoryName: "Makanan & Minuman", amount: 25000, description: "makan" },
+      { type: "INCOME", categoryName: "Gaji", amount: 5000000, description: "gaji" },
+    ]);
+    expect(msg).toContain("Konfirmasi transaksi");
   });
 });
 

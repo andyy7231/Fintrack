@@ -212,23 +212,49 @@ export interface ConfirmationItem {
 export function formatConfirmation(items: ConfirmationItem[]): string {
   if (items.length === 1) {
     const item = items[0]!;
-    const typeLabel = item.type === "EXPENSE" ? "Pengeluaran"
-      : item.type === "INCOME" ? "Pemasukan"
-      : item.type === "TRANSFER" ? "Transfer"
-      : "Budget";
-    const cat = item.categoryName || (item.type === "EXPENSE" ? "Lainnya" : item.type === "INCOME" ? "Pemasukan Lain" : "-");
-    const accountInfo = item.type === "TRANSFER"
-      ? `\u2022 Dari: ${item.fromAccountName}\n\u2022 Ke: ${item.toAccountName}`
-      : `\u2022 Akun: ${item.accountName ?? "-"}`;
 
+    if (item.type === "TRANSFER") {
+      return (
+        `\uD83D\uDCDD Konfirmasi Transfer\n\n` +
+        `\u2022 Nominal: ${formatAmount(item.amount)}\n` +
+        `\u2022 Dari: ${item.fromAccountName ?? "-"}\n` +
+        `\u2022 Ke: ${item.toAccountName ?? "-"}\n\n` +
+        `Balas YA untuk menyimpan atau BATAL untuk membatalkan.`
+      );
+    }
+
+    if (item.type === "EXPENSE") {
+      const cat = item.categoryName || "Lainnya";
+      return (
+        `\uD83D\uDCDD Konfirmasi Pengeluaran\n\n` +
+        `\u2022 Nominal: ${formatAmount(item.amount)}\n` +
+        `\u2022 Kategori: ${cat}\n` +
+        `\u2022 Keterangan: ${item.description}\n` +
+        `\u2022 Akun: ${item.accountName ?? "-"}\n\n` +
+        `Balas YA untuk menyimpan atau BATAL untuk membatalkan.`
+      );
+    }
+
+    if (item.type === "INCOME") {
+      const cat = item.categoryName || "Pemasukan Lain";
+      return (
+        `\uD83D\uDCDD Konfirmasi Pemasukan\n\n` +
+        `\u2022 Nominal: ${formatAmount(item.amount)}\n` +
+        `\u2022 Kategori: ${cat}\n` +
+        `\u2022 Keterangan: ${item.description}\n` +
+        `\u2022 Akun: ${item.accountName ?? "-"}\n\n` +
+        `Balas YA untuk menyimpan atau BATAL untuk membatalkan.`
+      );
+    }
+
+    // BUDGET_ALLOCATION fallback
+    const cat = item.categoryName || "-";
     return (
-      `\uD83D\uDCDD Konfirmasi transaksi\n\n` +
-      `Saya akan mencatat:\n\n` +
-      `\u2022 ${typeLabel}: ${formatAmount(item.amount)}\n` +
+      `\uD83D\uDCDD Konfirmasi Budget\n\n` +
+      `\u2022 Nominal: ${formatAmount(item.amount)}\n` +
       `\u2022 Kategori: ${cat}\n` +
-      `\u2022 Keterangan: ${item.description}\n` +
-      `${accountInfo}\n\n` +
-      `Balas *YA* untuk menyimpan\nBalas *BATAL* untuk membatalkan`
+      `\u2022 Keterangan: ${item.description}\n\n` +
+      `Balas YA untuk menyimpan atau BATAL untuk membatalkan.`
     );
   }
 

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { transactions, accounts, categories } from "@/db/schema";
-import { eq, and, or, isNull, gte, lte, ilike, desc } from "drizzle-orm";
+import { eq, and, or, isNull, gte, lte, ilike, desc, sql } from "drizzle-orm";
 import { CreateTransactionInput, UpdateTransactionInput } from "@/schemas/transaction.schema";
 
 export interface TransactionFilters {
@@ -12,6 +12,33 @@ export interface TransactionFilters {
   search?: string;
   limit?: number;
   offset?: number;
+}
+
+export interface TransactionSummary {
+  income: number;
+  expense: number;
+  net: number;
+}
+
+export interface TransactionsWithSummary {
+  transactions: Array<{
+    id: string;
+    userId: string;
+    accountId: string;
+    accountName: string | null;
+    categoryId: string | null;
+    categoryName: string | null;
+    categoryColor: string | null;
+    categoryIcon: string | null;
+    type: "INCOME" | "EXPENSE";
+    amount: string;
+    description: string;
+    transactionDate: Date;
+    source: string | null;
+    status: string | null;
+    createdAt: Date | null;
+  }>;
+  summary: TransactionSummary;
 }
 
 export class TransactionService {
@@ -151,6 +178,96 @@ export class TransactionService {
       .offset(filters.offset || 0);
 
     return query;
+  }
+
+  /**
+   * Fetch transactions with date filters and compute summary aggregations
+   * Returns both paginated transaction list and summary totals (income, expense, net)
+   */
+  static async getTransactionsWithSummary(
+    userId: string,
+    filters: TransactionFilters = {}
+  ): Promise<TransactionsWithSummary> {
+    // Build WHERE conditions array for both queries
+    const conditions = [eq(transactions.userId, userId)];
+
+    if (filters.type) {
+      conditions.push(eq(transactions.type, filters.type));
+    }
+    if (filters.accountId) {
+      conditions.push(eq(transactions.accountId, filters.accountId));
+    }
+    if (filters.categoryId) {
+      conditions.push(eq(transactions.categoryId, filters.categoryId));
+    }
+    if (filters.search) {
+      conditions.push(ilike(transactions.description, `%${filters.search}%`));
+    }
+
+    // Date range filters using gte and lte
+    if (filters.startDate) {
+      conditions.push(gte(transactions.transactionDate, filters.startDate));
+    }
+    if (filters.endDate) {
+      conditions.push(lte(transactions.transactionDate, filters.endDate));
+    }
+
+    // Execute two parallel queries: transaction list + summary aggregations
+    const [txList, summaryResult] = await Promise.all([
+      // Query 1: Transaction list with JOINs for accounts/categories
+      db
+        .select({
+          id: transactions.id,
+          userId: transactions.userId,
+          accountId: transactions.accountId,
+          accountName: accounts.name,
+          categoryId: transactions.categoryId,
+          categoryName: categories.name,
+          categoryColor: categories.color,
+          categoryIcon: categories.icon,
+          type: sql<"INCOME" | "EXPENSE">`${transactions.type}`,
+          amount: transactions.amount,
+          description: transactions.description,
+          transactionDate: transactions.transactionDate,
+          source: transactions.source,
+          status: transactions.status,
+          createdAt: transactions.createdAt,
+        })
+        .from(transactions)
+        .leftJoin(accounts, eq(transactions.accountId, accounts.id))
+        .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .where(and(...conditions))
+        .orderBy(desc(transactions.transactionDate), desc(transactions.createdAt))
+        .limit(filters.limit || 50)
+        .offset(filters.offset || 0),
+
+      // Query 2: Summary aggregations grouped by type
+      db
+        .select({
+          type: sql<"INCOME" | "EXPENSE">`${transactions.type}`,
+          total: sql<string>`SUM(${transactions.amount})`,
+        })
+        .from(transactions)
+        .where(and(...conditions))
+        .groupBy(transactions.type),
+    ]);
+
+    // Calculate summary totals: income, expense, net
+    const income = summaryResult.find((row) => row.type === "INCOME")?.total || "0";
+    const expense = summaryResult.find((row) => row.type === "EXPENSE")?.total || "0";
+
+    const incomeNum = parseFloat(income);
+    const expenseNum = parseFloat(expense);
+    const netNum = incomeNum - expenseNum;
+
+    return {
+      transactions: txList,
+      summary: {
+        income: incomeNum,
+        expense: expenseNum,
+        net: netNum,
+      },
+    };
   }
 
   /**

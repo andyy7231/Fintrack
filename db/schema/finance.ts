@@ -109,6 +109,9 @@ export const transactions = pgTable(
     index("transactions_accountId_idx").on(table.accountId),
     index("transactions_categoryId_idx").on(table.categoryId),
     index("transactions_type_idx").on(table.type),
+    // Composite index for efficient date range queries per user
+    // Optimizes getTransactionsWithSummary with startDate/endDate filters
+    index("idx_transactions_user_date").on(table.userId, table.transactionDate),
   ]
 );
 

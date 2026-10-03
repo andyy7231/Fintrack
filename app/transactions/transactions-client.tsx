@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { formatCurrency } from "@/lib/utils";
+import { PeriodType, PeriodRange } from "@/lib/types/period.types";
+import { calculatePeriodRange, formatPeriodLabel } from "@/lib/utils/period.utils";
+import PeriodFilter from "@/components/transactions/PeriodFilter";
+import { SummaryCards } from "@/components/transactions/SummaryCards";
 
 interface TransactionItem {
   id: string;
@@ -49,6 +53,22 @@ export function TransactionsClient({
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
+  // Period filter state
+  const [periodType, setPeriodType] = useState<PeriodType>("ALL");
+  const [periodStartDate, setPeriodStartDate] = useState<Date | undefined>();
+  const [periodEndDate, setPeriodEndDate] = useState<Date | undefined>();
+  const [periodLabel, setPeriodLabel] = useState<string>("Sejak pencatatan pertama");
+
+  // Summary state
+  const [summary, setSummary] = useState({
+    income: 0,
+    expense: 0,
+    net: 0,
+  });
+
+  // Loading state for summary
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   // Create Modal State
   const [showModal, setShowModal] = useState(false);
   const [type, setType] = useState<"EXPENSE" | "INCOME">("EXPENSE");
@@ -63,14 +83,72 @@ export function TransactionsClient({
   // Dynamic category filtering based on selected transaction type
   const availableCategories = categories.filter((c) => c.type === type);
 
-  // Filtered transactions
-  const filteredList = list.filter((tx) => {
-    if (typeFilter !== "ALL" && tx.type !== typeFilter) return false;
-    if (accountFilter !== "ALL" && tx.accountId !== accountFilter) return false;
-    if (categoryFilter !== "ALL" && tx.categoryId !== categoryFilter) return false;
-    if (search && !tx.description.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  // Fetch transactions with all filters including period
+  const fetchTransactions = useCallback(async () => {
+    setSummaryLoading(true);
+    
+    const params = new URLSearchParams();
+
+    // Existing filters
+    if (typeFilter !== "ALL") params.set("type", typeFilter);
+    if (accountFilter !== "ALL") params.set("accountId", accountFilter);
+    if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
+    if (search) params.set("search", search);
+
+    // Period filters
+    if (periodStartDate) params.set("startDate", periodStartDate.toISOString());
+    if (periodEndDate) params.set("endDate", periodEndDate.toISOString());
+
+    try {
+      const res = await fetch(`/api/v1/transactions?${params}`);
+      const json = await res.json();
+
+      if (json.success) {
+        setList(json.data.transactions || json.data);
+        // Update summary if present in response
+        if (json.data.summary) {
+          setSummary(json.data.summary);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch transactions:", error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }, [typeFilter, accountFilter, categoryFilter, search, periodStartDate, periodEndDate]);
+
+  // Handle period change from PeriodFilter
+  const handlePeriodChange = (type: PeriodType, start?: Date, end?: Date) => {
+    setPeriodType(type);
+
+    if (type === "CUSTOM") {
+      // For CUSTOM period, use provided dates
+      setPeriodStartDate(start);
+      setPeriodEndDate(end);
+      
+      // Format label for custom range
+      if (start && end) {
+        const range: PeriodRange = { start, end };
+        setPeriodLabel(formatPeriodLabel("CUSTOM", range));
+      }
+    } else {
+      // For preset periods, calculate range
+      const range = calculatePeriodRange(type);
+      setPeriodStartDate(range.start);
+      setPeriodEndDate(range.end);
+      
+      // Format label
+      setPeriodLabel(formatPeriodLabel(type, range));
+    }
+  };
+
+  // Refetch when filters change (including period)
+useEffect(() => {
+    fetchTransactions();
+  }, [fetchTransactions]);
+
+  // Filtered transactions (client-side filtering already handled by API)
+  const filteredList = list;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,11 +173,8 @@ export function TransactionsClient({
       if (!json.success) {
         setError(json.error?.message || "Gagal mencatat transaksi.");
       } else {
-        const refresh = await fetch("/api/v1/transactions");
-        const refreshJson = await refresh.json();
-        if (refreshJson.success) {
-          setList(refreshJson.data);
-        }
+        // Refetch transactions after successful creation
+        await fetchTransactions();
         setShowModal(false);
         setAmount("");
         setDescription("");
@@ -118,7 +193,8 @@ export function TransactionsClient({
       const res = await fetch(`/api/v1/transactions/${id}`, { method: "DELETE" });
       const json = await res.json();
       if (json.success) {
-        setList((prev) => prev.filter((t) => t.id !== id));
+        // Refetch transactions after successful deletion
+        await fetchTransactions();
       } else {
         alert(json.error?.message || "Gagal menghapus transaksi.");
       }
@@ -147,6 +223,27 @@ export function TransactionsClient({
         >
           + Catat Transaksi
         </button>
+      </div>
+
+      {/* Period Filter */}
+      <div className="mt-6">
+        <PeriodFilter
+          periodType={periodType}
+          onPeriodChange={handlePeriodChange}
+          startDate={periodStartDate}
+          endDate={periodEndDate}
+          periodLabel={periodLabel}
+        />
+      </div>
+
+      {/* Summary Cards */}
+      <div className="mt-6">
+        <SummaryCards
+          income={summary.income}
+          expense={summary.expense}
+          net={summary.net}
+          isLoading={summaryLoading}
+        />
       </div>
 
       {/* Filter Bar */}

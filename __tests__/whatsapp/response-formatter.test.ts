@@ -645,6 +645,149 @@ describe("formatConfirmation", () => {
     ]);
     expect(msg).toContain("Konfirmasi transaksi");
   });
+
+  // ── New format regression: old free-form sentence must never appear ─────────
+
+  test("REGRESSION: old free-form sentence format is NOT produced for expense", () => {
+    const msg = formatConfirmation([{
+      type: "EXPENSE",
+      categoryName: "Makanan & Minuman",
+      amount: 5000,
+      description: "makan",
+      accountName: "Kas",
+    }]);
+    // Old format: "Konfirmasi pengeluaran Rp... untuk \"...\" dari akun ...?"
+    expect(msg).not.toMatch(/Konfirmasi pengeluaran Rp.*untuk ".*" dari akun/);
+    expect(msg).not.toMatch(/Balas "ya" untuk konfirmasi atau "batal"/);
+  });
+
+  test("REGRESSION: old free-form sentence format is NOT produced for income", () => {
+    const msg = formatConfirmation([{
+      type: "INCOME",
+      categoryName: "Gaji",
+      amount: 5000000,
+      description: "gaji",
+      accountName: "BCA",
+    }]);
+    // Old format: "Konfirmasi pemasukan Rp... untuk \"...\" ke akun ...?"
+    expect(msg).not.toMatch(/Konfirmasi pemasukan Rp.*untuk ".*" ke akun/);
+    expect(msg).not.toMatch(/Balas "ya" untuk konfirmasi atau "batal"/);
+  });
+
+  test("REGRESSION: old budget free-form sentence is NOT produced", () => {
+    const msg = formatConfirmation([{
+      type: "BUDGET_ALLOCATION",
+      categoryName: "Makanan & Minuman",
+      amount: 600000,
+      description: "Budget Makanan & Minuman",
+    }]);
+    // Old format: "Konfirmasi alokasi budget untuk ... sebesar Rp...?"
+    expect(msg).not.toMatch(/Konfirmasi alokasi budget untuk.*sebesar/);
+    expect(msg).not.toMatch(/Balas "ya" untuk konfirmasi atau "batal"/);
+  });
+
+  // ── BUDGET_ALLOCATION structured format ────────────────────────────────────
+
+  test("budget: header is '📝 Konfirmasi Budget'", () => {
+    const msg = formatConfirmation([{
+      type: "BUDGET_ALLOCATION",
+      categoryName: "Transportasi",
+      amount: 300000,
+      description: "Budget Transportasi",
+    }]);
+    expect(msg).toContain("Konfirmasi Budget");
+    expect(msg).not.toContain("Konfirmasi transaksi");
+  });
+
+  test("budget: Nominal and Kategori fields present", () => {
+    const msg = formatConfirmation([{
+      type: "BUDGET_ALLOCATION",
+      categoryName: "Kesehatan",
+      amount: 500000,
+      description: "Budget Kesehatan",
+    }]);
+    expect(msg).toContain("Nominal: Rp500.000");
+    expect(msg).toContain("Kategori: Kesehatan");
+    expect(msg).toContain("YA");
+    expect(msg).toContain("BATAL");
+  });
+
+  // ── Arbitrary categories, accounts, amounts ────────────────────────────────
+
+  test.each([
+    ["Transportasi", 20000, "bensin", "GoPay"],
+    ["Belanja", 150000, "supermarket", "OVO"],
+    ["Kesehatan", 75000, "obat", "Mandiri"],
+    ["Hiburan", 50000, "netflix", "BCA"],
+    ["Pendidikan", 200000, "kursus online", "Dana"],
+    ["Tagihan & Utilitas", 350000, "listrik", "Jenius"],
+  ])(
+    "expense structured format: %s / %i / %s / %s",
+    (category, amount, description, account) => {
+      const msg = formatConfirmation([{
+        type: "EXPENSE",
+        categoryName: category,
+        amount,
+        description,
+        accountName: account,
+      }]);
+      expect(msg).toContain("Konfirmasi Pengeluaran");
+      expect(msg).toContain(`Nominal: Rp${amount.toLocaleString("id-ID")}`);
+      expect(msg).toContain(`Kategori: ${category}`);
+      expect(msg).toContain(`Keterangan: ${description}`);
+      expect(msg).toContain(`Akun: ${account}`);
+      expect(msg).toContain("YA");
+      expect(msg).toContain("BATAL");
+    }
+  );
+
+  test.each([
+    ["Gaji", 5000000, "gaji bulan ini", "BCA"],
+    ["Freelance", 2500000, "project web", "GoPay"],
+    ["Bonus", 1000000, "bonus kinerja", "Mandiri"],
+    ["Bisnis", 3000000, "jualan online", "OVO"],
+    ["Investasi", 500000, "dividen", "Dana"],
+  ])(
+    "income structured format: %s / %i / %s / %s",
+    (category, amount, description, account) => {
+      const msg = formatConfirmation([{
+        type: "INCOME",
+        categoryName: category,
+        amount,
+        description,
+        accountName: account,
+      }]);
+      expect(msg).toContain("Konfirmasi Pemasukan");
+      expect(msg).toContain(`Kategori: ${category}`);
+      expect(msg).toContain(`Keterangan: ${description}`);
+      expect(msg).toContain(`Akun: ${account}`);
+      expect(msg).toContain("YA");
+      expect(msg).toContain("BATAL");
+    }
+  );
+
+  test.each([
+    [100000, "BCA", "GoPay"],
+    [500000, "OVO", "Mandiri"],
+    [50000, "Dana", "BCA"],
+  ])(
+    "transfer structured format: Rp%i / dari %s ke %s",
+    (amount, from, to) => {
+      const msg = formatConfirmation([{
+        type: "TRANSFER",
+        categoryName: null,
+        amount,
+        description: `Transfer ${from} ke ${to}`,
+        fromAccountName: from,
+        toAccountName: to,
+      }]);
+      expect(msg).toContain("Konfirmasi Transfer");
+      expect(msg).toContain(`Dari: ${from}`);
+      expect(msg).toContain(`Ke: ${to}`);
+      expect(msg).toContain("YA");
+      expect(msg).toContain("BATAL");
+    }
+  );
 });
 
 // ─── YA Success ──────────────────────────────────────────────────────────────

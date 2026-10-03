@@ -58,6 +58,7 @@ import { IntentResolverService } from './resolver.service';
 import { formatRupiah } from './amount.utils';
 import { parseIndonesianDate } from './date.utils';
 import { ParseMetricsService } from './parse-metrics.service';
+import { formatConfirmation, ConfirmationItem } from '@/services/whatsapp/response-formatter.service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -632,13 +633,22 @@ export class HybridParserService {
           description: intent.description,
           transactionDate,
           budgetCategoryId: catRes.category.id,
+          // Display-only fields for response formatter
+          categoryName: catRes.category.name,
+        };
+
+        const budgetConfirmationItem: ConfirmationItem = {
+          type: 'BUDGET_ALLOCATION',
+          categoryName: catRes.category.name,
+          amount: intent.amount,
+          description: intent.description,
         };
 
         return {
           status: 'READY_FOR_CONFIRMATION',
           actionCount: 1,
           summaryText: `📊 Budget ${catRes.category.name} ${formatRupiah(intent.amount)}`,
-          confirmationPrompt: `Konfirmasi alokasi budget untuk ${catRes.category.name} sebesar ${formatRupiah(intent.amount)}?\n\nBalas "ya" untuk konfirmasi atau "batal" untuk membatalkan.`,
+          confirmationPrompt: formatConfirmation([budgetConfirmationItem]),
           actions: [action],
         };
       }
@@ -688,6 +698,8 @@ export class HybridParserService {
         const categoryId =
           catRes.status === 'RESOLVED' ? catRes.category.id : catRes.status === 'NOT_SPECIFIED' ? null : null;
 
+        const resolvedCategoryName = catRes.status === 'RESOLVED' ? catRes.category.name : null;
+
         const action: ResolvedActionPayload = {
           intentType: 'EXPENSE',
           amount: intent.amount,
@@ -695,20 +707,27 @@ export class HybridParserService {
           transactionDate,
           accountId: accRes.account.id,
           categoryId,
+          // Display-only fields for response formatter
+          categoryName: resolvedCategoryName,
+          accountName: accRes.account.name,
         };
 
-        const categoryText = categoryId
-          ? catRes.status === 'RESOLVED'
-            ? ` — ${catRes.category.name}`
-            : ''
-          : '';
+        const categoryText = resolvedCategoryName ? ` — ${resolvedCategoryName}` : '';
         const accountText = accRes.isDefault ? '' : ` dari ${accRes.account.name}`;
+
+        const expenseConfirmationItem: ConfirmationItem = {
+          type: 'EXPENSE',
+          categoryName: resolvedCategoryName,
+          amount: intent.amount,
+          description: intent.description,
+          accountName: accRes.account.name,
+        };
 
         return {
           status: 'READY_FOR_CONFIRMATION',
           actionCount: 1,
           summaryText: `💸 Pengeluaran ${formatRupiah(intent.amount)} — ${intent.description}${categoryText}${accountText}`,
-          confirmationPrompt: `Konfirmasi pengeluaran ${formatRupiah(intent.amount)} untuk "${intent.description}" dari akun ${accRes.account.name}?\n\nBalas "ya" untuk konfirmasi atau "batal" untuk membatalkan.`,
+          confirmationPrompt: formatConfirmation([expenseConfirmationItem]),
           actions: [action],
         };
       }
@@ -740,15 +759,25 @@ export class HybridParserService {
           transactionDate,
           accountId: accRes.account.id,
           categoryId: null, // Income doesn't use category in this system
+          // Display-only fields for response formatter
+          accountName: accRes.account.name,
         };
 
         const accountText = accRes.isDefault ? '' : ` ke ${accRes.account.name}`;
+
+        const incomeConfirmationItem: ConfirmationItem = {
+          type: 'INCOME',
+          categoryName: null,
+          amount: intent.amount,
+          description: intent.description,
+          accountName: accRes.account.name,
+        };
 
         return {
           status: 'READY_FOR_CONFIRMATION',
           actionCount: 1,
           summaryText: `💰 Pemasukan ${formatRupiah(intent.amount)} — ${intent.description}${accountText}`,
-          confirmationPrompt: `Konfirmasi pemasukan ${formatRupiah(intent.amount)} untuk "${intent.description}" ke akun ${accRes.account.name}?\n\nBalas "ya" untuk konfirmasi atau "batal" untuk membatalkan.`,
+          confirmationPrompt: formatConfirmation([incomeConfirmationItem]),
           actions: [action],
         };
       }

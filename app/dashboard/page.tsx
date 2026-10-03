@@ -12,6 +12,7 @@ import { DailyExpenseChart } from "@/components/dashboard/daily-expense-chart";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { GoalsOverview } from "@/components/dashboard/goals-overview";
 import { KpiSectionClient } from "@/components/dashboard/kpi-section-client";
+import { perf } from "@/lib/utils/perf";
 
 // ─── Account type icon ────────────────────────────────────────────────────────
 
@@ -31,7 +32,11 @@ function accountTypeIcon(type: string) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const sessionData = await getSession();
+  perf.reset();
+  perf.start("DashboardPage:total");
+  const sessionData = await perf.measure("DashboardPage:getSession", () =>
+    getSession()
+  );
 
   if (!sessionData?.user) {
     redirect("/login");
@@ -52,15 +57,33 @@ export default async function DashboardPage() {
     goalSummary,
     firstTransactionDate,
   ] = await Promise.all([
-    DashboardService.getSummary(user.id, timezone),
-    DashboardService.getMonthlyTrend(user.id, timezone),
-    DashboardService.getExpenseByCategory(user.id, timezone),
-    DashboardService.getDailyExpenseTrend(user.id, timezone),
-    DashboardService.getAccountBalances(user.id),
-    BudgetService.getBudgetSummary(user.id),
-    GoalService.getGoalSummary(user.id),
-    DashboardService.getFirstTransactionDate(user.id),
+    perf.measure("DashboardPage:getSummary", () =>
+      DashboardService.getSummary(user.id, timezone)
+    ),
+    perf.measure("DashboardPage:getMonthlyTrend", () =>
+      DashboardService.getMonthlyTrend(user.id, timezone)
+    ),
+    perf.measure("DashboardPage:getExpenseByCategory", () =>
+      DashboardService.getExpenseByCategory(user.id, timezone)
+    ),
+    perf.measure("DashboardPage:getDailyExpenseTrend", () =>
+      DashboardService.getDailyExpenseTrend(user.id, timezone)
+    ),
+    perf.measure("DashboardPage:getAccountBalances", () =>
+      DashboardService.getAccountBalances(user.id)
+    ),
+    perf.measure("DashboardPage:getBudgetSummary", () =>
+      BudgetService.getBudgetSummary(user.id)
+    ),
+    perf.measure("DashboardPage:getGoalSummary", () =>
+      GoalService.getGoalSummary(user.id)
+    ),
+    perf.measure("DashboardPage:getFirstTransactionDate", () =>
+      DashboardService.getFirstTransactionDate(user.id)
+    ),
   ]);
+
+  perf.end("DashboardPage:parallelFetch");
 
   // Convert firstTransactionDate to Jakarta YYYY-MM-DD string
   const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;

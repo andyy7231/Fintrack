@@ -15,13 +15,14 @@ interface TransactionItem {
   categoryId: string | null;
   categoryName: string | null;
   categoryColor: string | null;
+  categoryIcon: string | null;
   type: string;
   amount: string;
   description: string;
-  transactionDate: Date | string;
-  source: string;
-  status: string;
-  createdAt: Date | string;
+  transactionDate: Date;
+  source: string | null;
+  status: string | null;
+  createdAt: Date | string | null;
 }
 
 interface AccountOption {
@@ -36,14 +37,22 @@ interface CategoryOption {
   type: string;
 }
 
+interface TransactionSummary {
+  income: number;
+  expense: number;
+  net: number;
+}
+
 interface TransactionsClientProps {
   initialTransactions: TransactionItem[];
+  initialSummary: TransactionSummary;
   accounts: AccountOption[];
   categories: CategoryOption[];
 }
 
 export function TransactionsClient({
   initialTransactions,
+  initialSummary,
   accounts,
   categories,
 }: TransactionsClientProps) {
@@ -59,15 +68,14 @@ export function TransactionsClient({
   const [periodEndDate, setPeriodEndDate] = useState<Date | undefined>();
   const [periodLabel, setPeriodLabel] = useState<string>("Sejak pencatatan pertama");
 
-  // Summary state
-  const [summary, setSummary] = useState({
-    income: 0,
-    expense: 0,
-    net: 0,
-  });
+  // Summary state (initialized from SSR)
+  const [summary, setSummary] = useState<TransactionSummary>(initialSummary);
 
   // Loading state for summary
   const [summaryLoading, setSummaryLoading] = useState(false);
+
+  // Track if this is the initial load to prevent immediate refetch
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Create Modal State
   const [showModal, setShowModal] = useState(false);
@@ -146,9 +154,14 @@ export function TransactionsClient({
   };
 
   // Refetch when filters change (including period)
-useEffect(() => {
+  // Skip the initial fetch to use SSR data
+  useEffect(() => {
+    if (isInitialLoad) {
+      setIsInitialLoad(false);
+      return;
+    }
     fetchTransactions();
-  }, [fetchTransactions]);
+  }, [fetchTransactions, isInitialLoad]);
 
   // Filtered transactions (client-side filtering already handled by API)
   const filteredList = list;

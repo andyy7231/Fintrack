@@ -199,8 +199,17 @@ export class BudgetQueryService {
       statusText = `✅ *Aman* (Tersisa ${sisaPersen.toFixed(1)}% kuota)`;
     }
 
+    // FIX 3: Integrate period info (display last included date for consistency)
+    const periodLabel = getPeriodTypeLabel(b.periodType);
+    const displayEndDate = new Date(b.endDate.getTime() - 24 * 60 * 60 * 1000);
+    const periodRange = `${formatIndonesianDate(b.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
+    const remainingDays = getRemainingDays(b.endDate);
+    const remainingText = remainingDays > 0 ? `${remainingDays} hari lagi` : "Berakhir hari ini";
+
     return (
       `${icon} *Status Budget ${b.categoryName}*\n\n` +
+      `📅 Periode: ${periodLabel}\n` +
+      `📆 ${periodRange} (${remainingText})\n\n` +
       `• Batas Anggaran: Rp ${formatRupiah(b.limitAmount)}\n` +
       `• Sudah Terpakai: Rp ${formatRupiah(b.spentAmount)} (${b.usagePercentage.toFixed(1)}%)\n` +
       `• Sisa Kuota: *Rp ${formatRupiah(b.remainingAmount)}*\n\n` +

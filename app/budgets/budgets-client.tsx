@@ -69,9 +69,12 @@ function calculateRollingPeriodPreview(startDate: string | null, durationDays: n
   const start = startDate ? new Date(startDate + "T00:00:00") : new Date();
   const end = new Date(start.getTime() + durationDays * 24 * 60 * 60 * 1000);
   
+  // FIX 1: Display last included date (end - 1 day) since backend uses exclusive upper bound
+  const displayEnd = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  
   return {
     start: formatIndonesianDate(start),
-    end: formatIndonesianDate(end),
+    end: formatIndonesianDate(displayEnd),
   };
 }
 
@@ -117,7 +120,9 @@ function BudgetCard({
   };
 
   const periodLabel = getPeriodTypeLabel(budget.periodType);
-  const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(budget.endDate)}`;
+  // FIX 2: Display last included date (endDate - 1 day) for rolling/custom periods
+  const displayEndDate = new Date(budget.endDate.getTime() - 24 * 60 * 60 * 1000);
+  const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
   const remainingDays = getRemainingDays(budget.endDate);
 
   return (

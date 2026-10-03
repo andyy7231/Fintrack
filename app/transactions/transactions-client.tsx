@@ -130,6 +130,9 @@ export function TransactionsClient({
       if (start && end) {
         const range: PeriodRange = { start, end };
         setPeriodLabel(formatPeriodLabel("CUSTOM", range));
+      } else {
+        // Placeholder label when dates not yet selected
+        setPeriodLabel("Pilih tanggal custom");
       }
     } else {
       // For preset periods, calculate range

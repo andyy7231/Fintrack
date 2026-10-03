@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { PeriodType } from "@/lib/types/period.types";
@@ -126,7 +126,8 @@ export default function PeriodFilter({
       // Switch to CUSTOM mode - initialize with prop dates if available
       if (startDate) setCustomStartDate(formatDateForInput(startDate));
       if (endDate) setCustomEndDate(formatDateForInput(endDate));
-      // Don't call onPeriodChange yet - wait for user to select dates
+      // Call onPeriodChange to update parent state, dates will be provided later
+      onPeriodChange(newType);
     } else {
       // Preset period - call onPeriodChange immediately
       setCustomStartDate("");

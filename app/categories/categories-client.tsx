@@ -148,7 +148,7 @@ export function CategoriesClient({ initialCategories }: CategoriesClientProps) {
                   {cat.name}
                 </p>
                 <p className="text-xs text-zinc-400">
-                  {cat.type === "INCOME" ? "Pemasukan" : "Pengeluaran"} •{" "}
+                  {cat.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}{" \u2022 "}
                   {cat.isDefault ? "Bawaan Sistem" : "Kustom"}
                 </p>
               </div>

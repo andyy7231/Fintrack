@@ -1,0 +1,263 @@
+﻿
+> fintrack@0.1.0 test:run
+> vitest run __tests__/e2e/phase-e3-security-abuse.test.ts
+
+node.exe : [33mThe CJS build of Vite's Node API is 
+deprecated. See https://vite.dev/guide/troubleshooting.htm
+l#vite-cjs-node-api-deprecated for more details.[39m
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33mThe CJS 
+    bu...e details.[39m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.8 [39m[90mD:/projects/fintrack[39m
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts
+[22m[39m[E2E Setup] Database environment configured
+[E2E Setup] TEST URL: postgresql://postgres.suhjevptsrlyubsezhzj:***@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+[E2E Setup] PROD URL: NOT SET
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts
+[22m[39m[Test DB] Using Supabase TEST database
+[Test DB] URL (masked): postgresql://postgres.suhjevptsrlyubsezhzj:***@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts
+[22m[39m[Test DB] Connecting to Supabase TEST database...
+[Test DB] Supabase TEST project: true
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[E2E Setup] Phase E.3 Security Tests
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+[Test DB] Cleaning Supabase TEST database...
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[Test DB] Note: budget_allocations table may not exist yet
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[Test DB] Note: goals table may not exist yet
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transfers"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "account"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "session"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "accounts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "categories"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transfers"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_contacts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_messages"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_pending_actions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_verification_challenges"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "financial_goals"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+[Test DB] Database cleaned
+[Test DB] Connecting to Supabase TEST database...
+[Test DB] Supabase TEST project: true
+[Fixtures] Seeding test data...
+
+[90mstdout[2m | __tests__/e2e/phase-e3-security-abuse.test.ts[2m > [22m[2mPhase E.3: Security & Abuse Testing
+[22m[39m[Fixtures] Test data seeded successfully
+[Fixtures] Users: 2
+[Fixtures] Accounts: 5
+[Fixtures] Categories: 4
+

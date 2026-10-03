@@ -1,0 +1,31 @@
+﻿# Docker Compose for isolated test PostgreSQL
+version: '3.8'
+
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: fintrack-test-db
+    environment:
+      POSTGRES_USER: fintrack_test_user
+      POSTGRES_PASSWORD: fintrack_test_password_12345
+      POSTGRES_DB: fintrack_test
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+    ports:
+      - "5433:5432"
+    volumes:
+      - fintrack-test-data:/var/lib/postgresql/data
+    command: 
+      - "postgres"
+      - "-c"
+      - "log_statement=all"
+      - "-c"
+      - "log_duration=on"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fintrack_test_user -d fintrack_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fintrack-test-data:
+    driver: local

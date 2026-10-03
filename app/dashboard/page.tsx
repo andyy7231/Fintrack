@@ -11,6 +11,7 @@ import { ExpenseCategoryChart } from "@/components/dashboard/expense-category-ch
 import { DailyExpenseChart } from "@/components/dashboard/daily-expense-chart";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { GoalsOverview } from "@/components/dashboard/goals-overview";
+import { KpiSectionClient } from "@/components/dashboard/kpi-section-client";
 
 // ─── Account type icon ────────────────────────────────────────────────────────
 
@@ -25,37 +26,6 @@ function accountTypeIcon(type: string) {
     default:
       return "💳";
   }
-}
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  colorClass,
-  prefix,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  colorClass?: string;
-  prefix?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-        {label}
-      </p>
-      <p className={`mt-2 text-2xl font-bold ${colorClass || "text-zinc-900 dark:text-zinc-100"}`}>
-        {prefix}
-        {value}
-      </p>
-      {sub && (
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>
-      )}
-    </div>
-  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -80,6 +50,7 @@ export default async function DashboardPage() {
     accountBalances,
     budgetList,
     goalSummary,
+    firstTransactionDate,
   ] = await Promise.all([
     DashboardService.getSummary(user.id, timezone),
     DashboardService.getMonthlyTrend(user.id, timezone),
@@ -88,33 +59,16 @@ export default async function DashboardPage() {
     DashboardService.getAccountBalances(user.id),
     BudgetService.getBudgetSummary(user.id),
     GoalService.getGoalSummary(user.id),
+    DashboardService.getFirstTransactionDate(user.id),
   ]);
 
-  // Extract KPIs from summary
-  const kpis = {
-    totalNetWorth: summary.totalBalance,
-    incomeThisMonth: summary.incomeThisMonth,
-    expenseThisMonth: summary.expenseThisMonth,
-    netSavings: summary.netThisMonth,
-    savingRate: summary.incomeThisMonth > 0 
-      ? (summary.netThisMonth / summary.incomeThisMonth) * 100 
-      : 0,
-    activeAccountsCount: summary.activeAccountsCount,
-  };
+  // Convert firstTransactionDate to Jakarta YYYY-MM-DD string
+  const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+  const firstDateStr = new Date(firstTransactionDate.getTime() + TZ_OFFSET_MS)
+    .toISOString()
+    .slice(0, 10);
 
   const recentTxns = summary.recentTransactions;
-
-  const savingRateColor =
-    kpis.savingRate >= 20
-      ? "text-emerald-600 dark:text-emerald-400"
-      : kpis.savingRate >= 0
-      ? "text-amber-600 dark:text-amber-400"
-      : "text-red-600 dark:text-red-400";
-
-  const netSavingsColor =
-    kpis.netSavings >= 0
-      ? "text-blue-600 dark:text-blue-400"
-      : "text-amber-600 dark:text-amber-400";
 
   // Determine Jakarta current month name for chart titles
   const now = new Date();
@@ -164,51 +118,40 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 5 KPI Cards + Free Cash ── */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          <KpiCard
-            label="Uang Keseluruhan"
-            value={formatCurrency(summary.totalBalance)}
-            sub="Total termasuk alokasi budget"
-          />
-          <KpiCard
-            label="Uang Free"
-            value={formatCurrency(summary.freeCash)}
-            sub="Saldo yang tersedia untuk dibelanjakan"
-            colorClass={
-              summary.freeCash < summary.totalBalance * 0.1
-                ? "text-red-600 dark:text-red-400"
-                : "text-blue-600 dark:text-blue-400"
-            }
-          />
-          <KpiCard
-            label="Pemasukan Bulan Ini"
-            value={formatCurrency(kpis.incomeThisMonth)}
-            sub="Hanya transaksi Income"
-            colorClass="text-emerald-600 dark:text-emerald-400"
-            prefix="+"
-          />
-          <KpiCard
-            label="Pengeluaran Bulan Ini"
-            value={formatCurrency(kpis.expenseThisMonth)}
-            sub="Hanya transaksi Expense"
-            colorClass="text-red-600 dark:text-red-400"
-            prefix="-"
-          />
-          <KpiCard
-            label="Tabungan Bersih"
-            value={formatCurrency(Math.abs(kpis.netSavings))}
-            sub="Pemasukan − Pengeluaran"
-            colorClass={netSavingsColor}
-            prefix={kpis.netSavings >= 0 ? "+" : "-"}
-          />
-          <KpiCard
-            label="Tingkat Tabungan"
-            value={`${kpis.savingRate.toFixed(1)}%`}
-            sub={kpis.incomeThisMonth === 0 ? "Tidak ada pemasukan" : "Dari pemasukan"}
-            colorClass={savingRateColor}
-          />
+        {/* ── Net Worth card (always total, no period filter) ── */}
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Uang Keseluruhan
+            </p>
+            <p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+              {formatCurrency(summary.totalBalance)}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Total termasuk alokasi budget
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Uang Free
+            </p>
+            <p
+              className={`mt-2 text-2xl font-bold ${
+                summary.freeCash < summary.totalBalance * 0.1
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-blue-600 dark:text-blue-400"
+              }`}
+            >
+              {formatCurrency(summary.freeCash)}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Saldo yang tersedia untuk dibelanjakan
+            </p>
+          </div>
         </div>
+
+        {/* ── Period-aware KPI Cards (client component) ── */}
+        <KpiSectionClient firstDate={firstDateStr} />
 
         {/* ── Charts Row 1: Income vs Expense | Category Donut ── */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -342,7 +285,7 @@ export default async function DashboardPage() {
             {recentTxns.length === 0 ? (
               <div className="p-8 text-center">
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  Belum ada transaksi bulan ini.
+                  Belum ada transaksi.
                 </p>
                 <div className="mt-4">
                   <Link

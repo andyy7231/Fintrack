@@ -1,0 +1,395 @@
+﻿
+> fintrack@0.1.0 test:run
+> vitest run __tests__/e2e/postgres-e2e.test.ts --reporter=verbose
+
+node.exe : [33mThe 
+CJS build of Vite's 
+Node API is 
+deprecated. See https
+://vite.dev/guide/tro
+ubleshooting.html#vit
+e-cjs-node-api-deprec
+ated for more 
+details.[39m
+At line:1 char:1
++ & "C:\Program Files
+\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([33mTh   
+ e CJS bu...e det    
+ails.[39m:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.8 [39m[90mD:/projects/fintrack[39m
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts
+[22m[39m[Test DB] Using Supabase TEST database
+[Test DB] URL (masked): postgresql://postgres.suhjevptsrlyubsezhzj:***@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts
+[22m[39m[Test DB] Connecting to Supabase TEST database...
+[Test DB] Supabase TEST project: true
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m
+========================================
+Phase E.1: PostgreSQL E2E Validation
+========================================
+
+? Test database safety verified
+  Supabase TEST: true
+  Test URL: postgresql://postgres.suhjevptsrlyubsezhzj:***@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
+
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+? Database identity verified
+  Name: postgres
+  Version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+
+Applying migrations...
+[Test DB] Applying migrations to Supabase TEST database...
+
+[90mstderr[2m | __t
+ests__/e2e/postgres-e
+2e.test.ts[2m > 
+[22m[2mPhase E.1: 
+PostgreSQL E2E 
+Validation
+[22m[39m[Test DB] 
+Migration stderr: 
+Error: Interactive 
+prompts require a 
+TTY terminal 
+(process.stdin.isTTY 
+or 
+process.stdout.isTTY 
+is false). This can 
+happen when running 
+in CI, piped input, 
+or non-interactive 
+shells.
+    at render10 (D:\p
+rojects\fintrack\node
+_modules\drizzle-kit\
+bin.cjs:1450:31)
+    at pgPush (D:\pro
+jects\fintrack\node_m
+odules\drizzle-kit\bi
+n.cjs:82737:72)
+    at process.proces
+sTicksAndRejections (
+node:internal/process
+/task_queues:104:5)
+    at async 
+Object.handler (D:\pr
+ojects\fintrack\node_
+modules\drizzle-kit\b
+in.cjs:92236:9)
+    at async run (D:\
+projects\fintrack\nod
+e_modules\drizzle-kit
+\bin.cjs:91472:7)
+
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Migrations applied successfully
+? Migrations applied
+
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+[Test DB] Cleaning Supabase TEST database...
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Note: budget_allocations table may not exist yet
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Note: goals table may not exist yet
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transfers"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "account"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "session"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "accounts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "categories"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transactions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "transfers"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_contacts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_messages"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_pending_actions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whatsapp_verification_challenges"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budgets"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "financial_goals"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Database cleaned
+? Database cleaned
+
+[Test DB] Connecting to Supabase TEST database...
+[Test DB] Supabase TEST project: true
+[Fixtures] Seeding test data...
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Fixtures] Test data seeded successfully
+[Fixtures] Users: 2
+[Fixtures] Accounts: 5
+[Fixtures] Categories: 4
+? Test fixtures seeded
+
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation[2m > [22m[2m1. Database Safety[2m > [22m[2mdatabase is Supabase TEST project
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+
+ [32mΓ£ô[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m1. Database Safety[2m > [22mdatabase is Supabase TEST project[33m 3103[2mms[22m[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m1. Database Safety[2m > [22mDATABASE_URL_TEST !== DATABASE_URL[33m 2170[2mms[22m[39m
+[31m   ΓåÆ DATABASE_URL_PROD is not defined[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m1. Database Safety[2m > [22mTest fixtures exist[33m 2347[2mms[22m[39m
+[31m   ΓåÆ categories is not defined[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m2. Expense Transaction Flow[2m > [22mPattern parser ? Expense ? Confirmation ? Database write[33m 8302[2mms[22m[39m
+[31m   ΓåÆ expected undefined to be 'makan siang 25k' // Object.is equality[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m2. Expense Transaction Flow[2m > [22mAccount hint extracted and resolved[33m 5348[2mms[22m[39m
+[31m   ΓåÆ Cannot read properties of undefined (reading 'parsedData')[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m3. Income Transaction Flow[2m > [22mPattern parser ? Income ? Confirmation ? Database write[33m 5335[2mms[22m[39m
+[31m   ΓåÆ Cannot read properties of undefined (reading 'parsedData')[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m4. Transfer Flow[2m > [22mAI parser ? Transfer ? Confirmation ? Database write[33m 5941[2mms[22m[39m
+[31m   ΓåÆ Cannot read properties of undefined (reading 'parsedData')[39m
+ [32mΓ£ô[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m4. Transfer Flow[2m > [22mSame account transfer rejected[33m 4695[2mms[22m[39m
+ [32mΓ£ô[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m5. Idempotency[2m > [22mDuplicate external_message_id does not create duplicate transaction[33m 5997[2mms[22m[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m6. User Isolation[2m > [22mUser A cannot access User B accounts[33m 5010[2mms[22m[39m
+[31m   ΓåÆ expected 'FAILED' to be 'NEEDS_CLARIFICATION' // Object.is equality[39m
+ [32mΓ£ô[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m6. User Isolation[2m > [22mUser B transactions isolated from User A[33m 9411[2mms[22m[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m7. Category Validation[2m > [22mSystem category resolved correctly[33m 6054[2mms[22m[39m
+[31m   ΓåÆ Cannot read properties of undefined (reading 'parsedData')[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m8. YA/BATAL Confirmation[2m > [22mYA confirmation executes pending action[33m 10712[2mms[22m[39m
+[31m   ΓåÆ expected undefined to be 'CONFIRMED' // Object.is equality[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m8. YA/BATAL Confirmation[2m > [22mBATAL cancels pending action[33m 7694[2mms[22m[39m
+[31m   ΓåÆ expected undefined to be 'CANCELLED' // Object.is equality[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m9. Message Lifecycle[2m > [22mMessage status transitions: RECEIVED ? PENDING_CONFIRMATION ? COMPLETED[33m 4987[2mms[22m[39m
+[31m   ΓåÆ expected 'FAILED' to be 'PENDING_CONFIRMATION' // Object.is equality[39m
+ [32mΓ£ô[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m10. Inactive Account Rejection[2m > [22mInactive account cannot be used[33m 5002[2mms[22m[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m11. Ambiguous Message Handling[2m > [22mMissing amount ? NEEDS_CLARIFICATION[33m 3685[2mms[22m[39m
+[31m   ΓåÆ expected 'FAILED' to be 'NEEDS_CLARIFICATION' // Object.is equality[39m
+ [31m├ù[39m __tests__/e2e/postgres-e2e.test.ts[2m > [22mPhase E.1: PostgreSQL E2E Validation[2m > [22m11. Ambiguous Message Handling[2m > [22mNon-financial message ? UNKNOWN[33m 3639[2mms[22m[39m
+[31m   ΓåÆ expected 'FAILED' to be 'NEEDS_CLARIFICATION' // Object.is equality[39m
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Connected to database: postgres
+[Test DB] Current user: postgres
+[Test DB] PostgreSQL version: PostgreSQL 17.11 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit
+[Test DB] Cleaning Supabase TEST database...
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "goal_contributions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1967'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | __tests__/e2e/postgres-e2e.test.ts[2m > [22m[2mPhase E.1: PostgreSQL E2E Validation
+[22m[39m[Test DB] Note: budget_allocations table may not exist yet
+

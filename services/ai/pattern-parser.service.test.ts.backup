@@ -1,0 +1,866 @@
+/**
+ * Pattern Parser Service Tests
+ *
+ * Test suite for pattern parser core structure and input validation.
+ */
+
+import { describe, it, expect } from 'vitest';
+import {
+  PatternParserService,
+  type PatternParseAttempt,
+  type PatternParseFailure,
+  type PatternParseResult,
+} from './pattern-parser.service';
+
+describe('PatternParserService', () => {
+  describe('Core Structure', () => {
+    it('should be defined as a class with static method', () => {
+      expect(PatternParserService).toBeDefined();
+      expect(PatternParserService.attemptPatternParse).toBeDefined();
+      expect(typeof PatternParserService.attemptPatternParse).toBe('function');
+    });
+  });
+
+  describe('Input Validation', () => {
+    it('should return INVALID_FORMAT for null input', () => {
+      const result = PatternParserService.attemptPatternParse(null as any);
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('INVALID_FORMAT');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+
+    it('should return INVALID_FORMAT for undefined input', () => {
+      const result = PatternParserService.attemptPatternParse(undefined as any);
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('INVALID_FORMAT');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+
+    it('should return INVALID_FORMAT for empty string', () => {
+      const result = PatternParserService.attemptPatternParse('');
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('INVALID_FORMAT');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+
+    it('should return INVALID_FORMAT for whitespace-only string', () => {
+      const result = PatternParserService.attemptPatternParse('   ');
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('INVALID_FORMAT');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+
+    it('should return INVALID_FORMAT for non-string input', () => {
+      const result = PatternParserService.attemptPatternParse(12345 as any);
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('INVALID_FORMAT');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should return NO_MATCH for valid input with no pattern match', () => {
+      // Currently all parsers return null (not implemented yet)
+      const result = PatternParserService.attemptPatternParse('Hello world');
+      
+      expect(result.success).toBe(false);
+      expect((result as PatternParseFailure).reason).toBe('NO_MATCH');
+      expect((result as PatternParseFailure).fallbackRequired).toBe(true);
+    });
+
+    it('should never throw exceptions', () => {
+      // Test with various potentially problematic inputs
+      const problematicInputs = [
+        null,
+        undefined,
+        '',
+        '   ',
+        12345,
+        {},
+        [],
+        'Normal text',
+      ];
+
+      problematicInputs.forEach(input => {
+        expect(() => {
+          PatternParserService.attemptPatternParse(input as any);
+        }).not.toThrow();
+      });
+    });
+  });
+
+  describe('Return Type Structure', () => {
+    it('should return PatternParseFailure with correct structure', () => {
+      const result = PatternParserService.attemptPatternParse('');
+      
+      expect(result).toHaveProperty('success');
+      expect(result.success).toBe(false);
+      expect(result).toHaveProperty('reason');
+      expect(result).toHaveProperty('fallbackRequired');
+      
+      const failure = result as PatternParseFailure;
+      expect(['NO_MATCH', 'AMBIGUOUS', 'MULTI_ACTION', 'COMPLEX_DATE', 'INVALID_FORMAT'])
+        .toContain(failure.reason);
+      expect(failure.fallbackRequired).toBe(true);
+    });
+  });
+
+  describe('Income Pattern Parsing', () => {
+    describe('Basic Income Commands', () => {
+      it('should parse simple income with verb and amount: "Gaji 10jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(10000000);
+          expect(result.intent.description).toBe('Gaji');
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          expect(result.intent.categoryHint).toBeNull();
+        }
+      });
+
+      it('should parse income with description: "Terima transfer 500k"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima transfer 500k');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(500000);
+          expect(result.intent.description).toBe('transfer');
+        }
+      });
+
+      it('should parse income with "dapat" verb: "Dapat bonus 2jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Dapat bonus 2jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(2000000);
+          expect(result.intent.description).toBe('bonus');
+        }
+      });
+
+      it('should parse income with "dapet" colloquial verb: "Dapet 150rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Dapet 150rb');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(150000);
+          expect(result.intent.description).toBe('Dapet');
+        }
+      });
+
+      it('should parse income with "bonus" verb: "Bonus 3jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Bonus 3jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(3000000);
+          expect(result.intent.description).toBe('Bonus');
+        }
+      });
+
+      it('should parse income with "pendapatan" verb: "Pendapatan freelance 5jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Pendapatan freelance 5jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(5000000);
+          expect(result.intent.description).toBe('freelance');
+        }
+      });
+
+      it('should parse income with "masuk" verb: "Masuk 1jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Masuk 1jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(1000000);
+          expect(result.intent.description).toBe('Masuk');
+        }
+      });
+
+      it('should parse income with "income" English verb: "Income 8jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Income 8jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(8000000);
+          expect(result.intent.description).toBe('Income');
+        }
+      });
+    });
+
+    describe('Income with Account Hints', () => {
+      it('should extract account hint with "ke" indicator: "Gaji 10jt ke BCA"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt ke BCA');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(10000000);
+          expect(result.intent.accountHint).toBe('BCA');
+        }
+      });
+
+      it('should extract account hint with "masuk" indicator: "Terima 500k masuk Mandiri"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima 500k masuk Mandiri');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(500000);
+          expect(result.intent.accountHint).toBe('Mandiri');
+        }
+      });
+
+      it('should extract multi-word account hint: "Bonus 2jt ke Bank Central Asia"', () => {
+        const result = PatternParserService.attemptPatternParse('Bonus 2jt ke Bank Central Asia');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(2000000);
+          expect(result.intent.accountHint).toContain('Bank');
+        }
+      });
+    });
+
+    describe('Income with Date Expressions', () => {
+      it('should extract date with "kemarin" keyword: "Gaji 10jt kemarin"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt kemarin');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(10000000);
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+
+      it('should extract date with "hari ini" keyword: "Terima 500k hari ini"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima 500k hari ini');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(500000);
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+
+      it('should extract date with "tadi" keyword: "Dapat 150rb tadi"', () => {
+        const result = PatternParserService.attemptPatternParse('Dapat 150rb tadi');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.amount).toBe(150000);
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+
+      it('should default to today when no date specified', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          // Validate it's a valid date
+          const date = new Date(result.intent.transactionDate);
+          expect(date.toString()).not.toBe('Invalid Date');
+        }
+      });
+    });
+
+    describe('Income Amount Normalization', () => {
+      it('should normalize "rb" abbreviation: "Terima 250rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima 250rb');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(250000);
+        }
+      });
+
+      it('should normalize "ribu" abbreviation: "Dapat 350 ribu"', () => {
+        const result = PatternParserService.attemptPatternParse('Dapat 350 ribu');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(350000);
+        }
+      });
+
+      it('should normalize "k" abbreviation: "Bonus 750k"', () => {
+        const result = PatternParserService.attemptPatternParse('Bonus 750k');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(750000);
+        }
+      });
+
+      it('should normalize decimal "jt" abbreviation: "Gaji 8.5jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 8.5jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(8500000);
+        }
+      });
+
+      it('should normalize decimal with comma: "Pendapatan 12,5 juta"', () => {
+        const result = PatternParserService.attemptPatternParse('Pendapatan 12,5 juta');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(12500000);
+        }
+      });
+
+      it('should normalize pure numeric amount: "Terima 500000"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima 500000');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(500000);
+        }
+      });
+    });
+
+    describe('Income Negative Cases', () => {
+      it('should fail on multi-action with "dan": "Gaji 10jt dan bonus 2jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt dan bonus 2jt');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail on multi-action with comma: "Terima 500k, dapat 200k"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima 500k, dapat 200k');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail on ambiguous phrasing with "kayaknya": "Gaji kayaknya 10jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji kayaknya 10jt');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail on ambiguous phrasing with "mungkin": "Terima mungkin 500k"', () => {
+        const result = PatternParserService.attemptPatternParse('Terima mungkin 500k');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail on complex date with time: "Gaji 10jt kemarin jam 3 sore"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt kemarin jam 3 sore');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail on future date: "Gaji 10jt besok"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt besok');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail when missing amount: "Gaji dari kantor"', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji dari kantor');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+
+      it('should fail when not starting with income verb: "Saya dapat gaji 10jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Saya dapat gaji 10jt');
+        
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.fallbackRequired).toBe(true);
+        }
+      });
+    });
+
+    describe('Income Category Hints', () => {
+      it('should not extract category hints for income (always null)', () => {
+        const result = PatternParserService.attemptPatternParse('Gaji 10jt kategori pendapatan');
+        
+        // Even if "kategori" keyword present, income doesn't use it
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('INCOME');
+          expect(result.intent.categoryHint).toBeNull();
+        }
+      });
+    });
+  });
+});
+
+  describe('Budget Allocation Pattern Parsing', () => {
+    describe('Simple Budget Commands', () => {
+      it('should parse "Budget makan 1jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('BUDGET_ALLOCATION');
+          expect(result.intent.amount).toBe(1000000);
+          expect(result.intent.categoryName).toBe('makan');
+          expect(result.intent.description).toBe('Budget makan');
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+
+      it('should parse "Anggaran transport 500rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Anggaran transport 500rb');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('BUDGET_ALLOCATION');
+          expect(result.intent.amount).toBe(500000);
+          expect(result.intent.categoryName).toBe('transport');
+          expect(result.intent.description).toBe('Budget transport');
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+
+      it('should parse "Alokasi hiburan 800k"', () => {
+        const result = PatternParserService.attemptPatternParse('Alokasi hiburan 800k');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('BUDGET_ALLOCATION');
+          expect(result.intent.amount).toBe(800000);
+          expect(result.intent.categoryName).toBe('hiburan');
+          expect(result.intent.description).toBe('Budget hiburan');
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        }
+      });
+    });
+
+    describe('Multi-word Category Names', () => {
+      it('should parse "Budget hiburan dan rekreasi 800k"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget hiburan dan rekreasi 800k');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('BUDGET_ALLOCATION');
+          expect(result.intent.amount).toBe(800000);
+          expect(result.intent.categoryName).toBe('hiburan dan rekreasi');
+          expect(result.intent.description).toBe('Budget hiburan dan rekreasi');
+        }
+      });
+
+      it('should parse "Anggaran makanan dan minuman 1.5jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Anggaran makanan dan minuman 1.5jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.intent).toBe('BUDGET_ALLOCATION');
+          expect(result.intent.amount).toBe(1500000);
+          expect(result.intent.categoryName).toBe('makanan dan minuman');
+        }
+      });
+    });
+
+    describe('All Budget Prefixes', () => {
+      it('should recognize "budget" prefix', () => {
+        const result = PatternParserService.attemptPatternParse('budget makan 1jt');
+        expect(result.success).toBe(true);
+      });
+
+      it('should recognize "anggaran" prefix', () => {
+        const result = PatternParserService.attemptPatternParse('anggaran makan 1jt');
+        expect(result.success).toBe(true);
+      });
+
+      it('should recognize "alokasi" prefix', () => {
+        const result = PatternParserService.attemptPatternParse('alokasi makan 1jt');
+        expect(result.success).toBe(true);
+      });
+    });
+
+    describe('Multi-Action Detection', () => {
+      it('should fail on "Budget makan 1jt dan transport 500rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1jt dan transport 500rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Budget makan 1jt, transport 500rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1jt, transport 500rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Budget makan 1jt serta hiburan 300k"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1jt serta hiburan 300k');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Validation Edge Cases', () => {
+      it('should fail when category name is missing: "Budget 1jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget 1jt');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail when amount is missing: "Budget makan"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail when amount is invalid: "Budget makan abc"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan abc');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail when prefix is missing: "makan 1jt"', () => {
+        const result = PatternParserService.attemptPatternParse('makan 1jt');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Amount Format Variations', () => {
+      it('should parse with "ribu" suffix: "Budget makan 500ribu"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 500ribu');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(500000);
+        }
+      });
+
+      it('should parse with "juta" suffix: "Budget makan 2juta"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 2juta');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(2000000);
+        }
+      });
+
+      it('should parse with decimal: "Budget makan 1.5jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1.5jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(1500000);
+        }
+      });
+
+      it('should parse with comma decimal: "Budget makan 1,5jt"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1,5jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(1500000);
+        }
+      });
+
+      it('should parse plain number: "Budget makan 1000000"', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1000000');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.intent.amount).toBe(1000000);
+        }
+      });
+    });
+
+    describe('Date Assignment', () => {
+      it('should use current Jakarta date', () => {
+        const result = PatternParserService.attemptPatternParse('Budget makan 1jt');
+        
+        expect(result.success).toBe(true);
+        if (result.success) {
+          // Date should be in YYYY-MM-DD format
+          expect(result.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          
+          // Date should be valid
+          const parsedDate = new Date(result.intent.transactionDate);
+          expect(parsedDate.toString()).not.toBe('Invalid Date');
+          
+          // Date should be recent (within last 24 hours to account for timezone)
+          const now = new Date();
+          const daysDiff = Math.abs(now.getTime() - parsedDate.getTime()) / (1000 * 60 * 60 * 24);
+          expect(daysDiff).toBeLessThan(2);
+        }
+      });
+    });
+  });
+
+  describe('Expense Pattern Parsing', () => {
+    describe('Simple Expense Commands', () => {
+      it('should parse "Beli kopi 25rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(25000);
+        expect(parsed.intent.description).toBe('kopi');
+        expect(parsed.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      });
+
+      it('should parse "Bayar parkir 5000"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir 5000');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(5000);
+        expect(parsed.intent.description).toBe('parkir');
+      });
+
+      it('should parse "Belanja bulanan 500k"', () => {
+        const result = PatternParserService.attemptPatternParse('Belanja bulanan 500k');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(500000);
+        expect(parsed.intent.description).toBe('bulanan');
+      });
+
+      it('should parse "Buat makan siang 45ribu"', () => {
+        const result = PatternParserService.attemptPatternParse('Buat makan siang 45ribu');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(45000);
+        expect(parsed.intent.description).toBe('makan siang');
+      });
+
+      it('should parse "Habis bensin 100rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Habis bensin 100rb');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(100000);
+        expect(parsed.intent.description).toBe('bensin');
+      });
+    });
+
+    describe('Expense with Account Hint', () => {
+      it('should extract account hint: "Bayar parkir 5000 dari BCA"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir 5000 dari BCA');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(5000);
+        expect(parsed.intent.description).toBe('parkir');
+        expect(parsed.intent.accountHint).toBe('BCA');
+      });
+
+      it('should extract account hint: "Beli kopi 25rb pakai GoPay"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb pakai GoPay');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.accountHint).toBe('GoPay');
+      });
+
+      it('should extract account hint: "Belanja bulanan 500k dengan kartu kredit"', () => {
+        const result = PatternParserService.attemptPatternParse('Belanja bulanan 500k dengan kartu kredit');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.accountHint).toBe('kartu kredit');
+      });
+    });
+
+    describe('Expense with Category Hint', () => {
+      it('should extract category hint: "Beli makan siang 45ribu kategori makanan"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli makan siang 45ribu kategori makanan');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(45000);
+        expect(parsed.intent.description).toBe('makan siang');
+        expect(parsed.intent.categoryHint).toBe('makanan');
+      });
+
+      it('should extract category hint: "Bayar bensin 100rb kategori transport"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar bensin 100rb kategori transport');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.categoryHint).toBe('transport');
+      });
+    });
+
+    describe('Expense with Date', () => {
+      it('should parse "Beli kopi 25rb kemarin"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb kemarin');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.intent).toBe('EXPENSE');
+        expect(parsed.intent.amount).toBe(25000);
+        expect(parsed.intent.description).toBe('kopi');
+        expect(parsed.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      });
+
+      it('should parse "Bayar parkir 5000 hari ini"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir 5000 hari ini');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      });
+
+      it('should parse "Beli makan 50rb tadi pagi"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli makan 50rb tadi pagi');
+        
+        expect(result.success).toBe(true);
+        const parsed = result as PatternParseResult;
+        expect(parsed.intent.transactionDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      });
+    });
+
+    describe('All Supported Expense Verbs', () => {
+      const expenseVerbs = ['beli', 'bayar', 'belanja', 'buat', 'untuk', 'habis', 'spent'];
+
+      expenseVerbs.forEach((verb) => {
+        it(`should recognize verb: "${verb}"`, () => {
+          const result = PatternParserService.attemptPatternParse(`${verb} test item 25rb`);
+          
+          expect(result.success).toBe(true);
+          const parsed = result as PatternParseResult;
+          expect(parsed.intent.intent).toBe('EXPENSE');
+        });
+      });
+    });
+
+    describe('Multi-Action Detection (Should Fail)', () => {
+      it('should fail on "Beli kopi 25rb dan makan siang 50rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb dan makan siang 50rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Bayar parkir 5000, beli kopi 25rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir 5000, beli kopi 25rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Beli kopi 25rb serta makan 50rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb serta makan 50rb');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Ambiguous Content Detection (Should Fail)', () => {
+      it('should fail on "Kemarin kayaknya habis sekitar 50rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Kemarin kayaknya habis sekitar 50rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Beli kopi mungkin 25rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi mungkin 25rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Bayar parkir kira-kira 5000"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir kira-kira 5000');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Complex Date Detection (Should Fail)', () => {
+      it('should fail on "Beli kopi 25rb 3 hari yang lalu"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb 3 hari yang lalu');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Bayar parkir 5000 kemarin jam 3 sore"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir 5000 kemarin jam 3 sore');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Beli kopi 25rb besok"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi 25rb besok');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Missing Amount (Should Fail)', () => {
+      it('should fail on "Beli kopi"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli kopi');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Bayar parkir"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar parkir');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('Missing Description (Should Fail)', () => {
+      it('should fail on "Beli 25rb"', () => {
+        const result = PatternParserService.attemptPatternParse('Beli 25rb');
+        
+        expect(result.success).toBe(false);
+      });
+
+      it('should fail on "Bayar 5000"', () => {
+        const result = PatternParserService.attemptPatternParse('Bayar 5000');
+        
+        expect(result.success).toBe(false);
+      });
+    });
+  });`n});

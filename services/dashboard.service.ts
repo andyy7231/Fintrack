@@ -147,6 +147,17 @@ const FALLBACK_COLOR = "#94a3b8";
 
 // ─── service ──────────────────────────────────────────────────────────────────
 
+// ─── Period-aware KPI types ───────────────────────────────────────────────────
+
+export interface PeriodKPIs {
+  income: number;
+  expense: number;
+  net: number;
+  transactionCount: number;
+  periodStart: string; // ISO date string
+  periodEnd: string;   // ISO date string
+}
+
 export class DashboardService {
   // ──────────────────────────────────────────────────────────────────
   // LEGACY: getSummary — kept for backward-compat with Phase 2 tests
@@ -742,5 +753,121 @@ export class DashboardService {
         (transferOutMap[acc.id] || 0);
     }
     return total;
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // Period-aware: first transaction date
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Returns the earliest confirmed transaction date for the user,
+   * adjusted to Jakarta midnight. Used for "Sejak pencatatan pertama".
+   * Returns today (Jakarta) if the user has no transactions yet.
+   */
+  static async getFirstTransactionDate(userId: string): Promise<Date> {
+    const tzOffsetMs = 7 * 60 * 60 * 1000;
+    const [row] = await db
+      .select({ earliest: sql<string>`min(${transactions.transactionDate})` })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.status, "CONFIRMED")
+        )
+      );
+
+    if (!row?.earliest) {
+      // No transactions — return start of today Jakarta
+      const now = new Date();
+      const jakartaMidnight = new Date(
+        Date.UTC(
+          now.getUTCFullYear(),
+          now.getUTCMonth(),
+          now.getUTCDate(),
+          -7, 0, 0, 0
+        )
+      );
+      return jakartaMidnight;
+    }
+
+    const earliest = new Date(row.earliest);
+    // Floor to Jakarta-local day start (subtract offset, then floor to UTC day)
+    const jakartaMs = earliest.getTime() + tzOffsetMs;
+    const jakartaDayStart = Math.floor(jakartaMs / 86_400_000) * 86_400_000;
+    return new Date(jakartaDayStart - tzOffsetMs);
+  }
+
+  // ──────────────────────────────────────────────────────────────────
+  // Period-aware KPIs: flexible date range
+  // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * Returns income, expense, net savings, and transaction count for any
+   * arbitrary UTC-based date range [start, end].
+   *
+   * The caller is responsible for converting a user's chosen period into
+   * UTC start/end boundaries. Jakarta-local boundaries are computed by
+   * subtracting 7 h from the local-midnight equivalents.
+   */
+  static async getKPIsForPeriod(
+    userId: string,
+    start: Date,
+    end: Date
+  ): Promise<PeriodKPIs> {
+    const [incomeRes, expenseRes, countRes] = await Promise.all([
+      db
+        .select({ total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.type, "INCOME"),
+            eq(transactions.status, "CONFIRMED"),
+            gte(transactions.transactionDate, start),
+            lte(transactions.transactionDate, end)
+          )
+        )
+        .then((r) => r[0]),
+
+      db
+        .select({ total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.type, "EXPENSE"),
+            eq(transactions.status, "CONFIRMED"),
+            gte(transactions.transactionDate, start),
+            lte(transactions.transactionDate, end)
+          )
+        )
+        .then((r) => r[0]),
+
+      db
+        .select({ count: sql<string>`count(*)` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.status, "CONFIRMED"),
+            gte(transactions.transactionDate, start),
+            lte(transactions.transactionDate, end)
+          )
+        )
+        .then((r) => r[0]),
+    ]);
+
+    const income = Math.round(parseFloat(incomeRes?.total || "0") * 100) / 100;
+    const expense = Math.round(parseFloat(expenseRes?.total || "0") * 100) / 100;
+    const count = parseInt(countRes?.count || "0");
+
+    return {
+      income,
+      expense,
+      net: Math.round((income - expense) * 100) / 100,
+      transactionCount: count,
+      periodStart: start.toISOString(),
+      periodEnd: end.toISOString(),
+    };
   }
 }

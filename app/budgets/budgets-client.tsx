@@ -121,9 +121,10 @@ function BudgetCard({
 
   const periodLabel = getPeriodTypeLabel(budget.periodType);
   // FIX 2: Display last included date (endDate - 1 day) for rolling/custom periods
-  const displayEndDate = new Date(budget.endDate.getTime() - 24 * 60 * 60 * 1000);
-  const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
-  const remainingDays = getRemainingDays(budget.endDate);
+  const endDateObj = new Date(budget.endDate);
+  const displayEndDate = new Date(endDateObj.getTime() - 24 * 60 * 60 * 1000);
+  const periodRange = `${formatIndonesianDate(new Date(budget.startDate))} - ${formatIndonesianDate(displayEndDate)}`;
+  const remainingDays = getRemainingDays(new Date(budget.endDate));
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">

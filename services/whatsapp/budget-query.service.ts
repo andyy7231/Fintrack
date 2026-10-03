@@ -201,9 +201,10 @@ export class BudgetQueryService {
 
     // FIX 3: Integrate period info (display last included date for consistency)
     const periodLabel = getPeriodTypeLabel(b.periodType);
-    const displayEndDate = new Date(b.endDate.getTime() - 24 * 60 * 60 * 1000);
-    const periodRange = `${formatIndonesianDate(b.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
-    const remainingDays = getRemainingDays(b.endDate);
+    const endDateObj = new Date(b.endDate);
+    const displayEndDate = new Date(endDateObj.getTime() - 24 * 60 * 60 * 1000);
+    const periodRange = `${formatIndonesianDate(new Date(b.startDate))} - ${formatIndonesianDate(displayEndDate)}`;
+    const remainingDays = getRemainingDays(new Date(b.endDate));
     const remainingText = remainingDays > 0 ? `${remainingDays} hari lagi` : "Berakhir hari ini";
 
     return (

@@ -536,3 +536,115 @@ export function formatGreeting(): string {
     `\u2022 transaksi terakhir`
   );
 }
+
+// --- Immediate Execution Response ---------------------------------------------
+
+/**
+ * Budget remaining information for immediate response
+ */
+export interface ImmediateBudgetInfo {
+  categoryName: string;
+  remainingAmount: number;
+  spentAmount: number;
+  limitAmount: number;
+}
+
+/**
+ * Single immediate execution result (for single transaction)
+ */
+export interface SingleImmediateResult {
+  type: "EXPENSE" | "INCOME" | "TRANSFER";
+  categoryName: string | null;
+  amount: number;
+  description: string;
+  accountName?: string;
+  fromAccountName?: string;
+  toAccountName?: string;
+  budgetInfo?: ImmediateBudgetInfo | null;
+  totalBalance: number;
+}
+
+/**
+ * Format single immediate execution success with rich balance info.
+ * Target: "? Pengeluaran makan Rp50.000 berhasil dicatat. ?? Sisa budget Makan: Rp450.000 ?? Sisa uang keseluruhan: Rp2.350.000"
+ */
+export function formatSingleImmediateSuccess(r: SingleImmediateResult): string {
+  const icon = getCategoryIcon(r.categoryName);
+  
+  if (r.type === "TRANSFER") {
+    // Transfer format: "?? Transfer Rp100.000 berhasil dicatat. BCA ? GoPay ?? Sisa uang keseluruhan: Rp2.350.000"
+    return (
+      `\uD83D\uDD04 Transfer ${formatAmount(r.amount)} berhasil dicatat. ` +
+      `${r.fromAccountName} ? ${r.toAccountName} ` +
+      `\uD83D\uDCB0 Sisa uang keseluruhan: ${formatAmount(r.totalBalance)}`
+    );
+  }
+  
+  // Income/Expense format
+  const typeLabel = r.type === "EXPENSE" ? "Pengeluaran" : "Pemasukan";
+  const categoryLabel = r.categoryName || (r.type === "EXPENSE" ? "lainnya" : "pemasukan lain");
+  
+  let response = 
+    `\u2705 ${typeLabel} ${categoryLabel.toLowerCase()} ${formatAmount(r.amount)} berhasil dicatat. ` +
+    `${icon}`;
+  
+  // Add budget info for EXPENSE if available
+  if (r.type === "EXPENSE" && r.budgetInfo) {
+    response += ` Sisa budget ${r.budgetInfo.categoryName}: ${formatAmount(r.budgetInfo.remainingAmount)}`;
+  }
+  
+  // Always add total balance
+  response += ` \uD83D\uDCB0 Sisa uang keseluruhan: ${formatAmount(r.totalBalance)}`;
+  
+  return response;
+}
+
+/**
+ * Batch immediate execution result (for multiple transactions)
+ */
+export interface BatchImmediateResult {
+  actions: Array<{
+    type: "EXPENSE" | "INCOME" | "TRANSFER";
+    categoryName: string | null;
+    amount: number;
+    description: string;
+  }>;
+  budgetInfos: ImmediateBudgetInfo[];
+  totalBalance: number;
+}
+
+/**
+ * Format batch immediate execution success with rich balance info.
+ */
+export function formatBatchImmediateSuccess(r: BatchImmediateResult): string {
+  const expenseTotal = r.actions
+    .filter(a => a.type === "EXPENSE")
+    .reduce((sum, a) => sum + a.amount, 0);
+  const incomeTotal = r.actions
+    .filter(a => a.type === "INCOME")
+    .reduce((sum, a) => sum + a.amount, 0);
+  const transferCount = r.actions.filter(a => a.type === "TRANSFER").length;
+  
+  let response = `\u2705 ${r.actions.length} transaksi berhasil dicatat\n\n`;
+  
+  // Summary by type
+  if (expenseTotal > 0) {
+    response += `\uD83D\uDCC9 Total pengeluaran: ${formatAmount(expenseTotal)}\n`;
+  }
+  if (incomeTotal > 0) {
+    response += `\uD83D\uDCC8 Total pemasukan: ${formatAmount(incomeTotal)}\n`;
+  }
+  if (transferCount > 0) {
+    response += `\uD83D\uDD04 ${transferCount} transfer\n`;
+  }
+  
+  // Add budget info for affected categories
+  r.budgetInfos.forEach(budget => {
+    response += `\n\uD83C\uDFF7\uFE0F Sisa budget ${budget.categoryName}: ${formatAmount(budget.remainingAmount)}`;
+  });
+  
+  // Always add total balance
+  response += `\n\uD83D\uDCB0 Sisa uang keseluruhan: ${formatAmount(r.totalBalance)}`;
+  
+  return response;
+}

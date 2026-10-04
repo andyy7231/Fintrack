@@ -5,6 +5,7 @@ import { WhatsAppInboundMessage, ProcessedWhatsAppMessage } from "./types";
 import { UserMappingService } from "./user-mapping.service";
 import { WhatsAppVerificationService } from "./verification.service";
 import { PendingActionService } from "./pending-action.service";
+import { ImmediateExecutionService } from "./immediate-execution.service";
 import { FinancialParserService } from "@/services/ai/parser.service";
 import { HybridParserService } from "@/services/ai/hybrid-parser.service";
 import { IWhatsAppClient, whatsAppClient } from "./client";
@@ -222,14 +223,27 @@ export class WhatsAppMessageService {
               );
 
               if (parseResult.status === "READY_FOR_CONFIRMATION") {
-                await PendingActionService.createPendingAction(
-                  mapping.userId,
-                  message.normalizedPhoneNumber,
-                  message.providerMessageId,
-                  parseResult.actions
-                );
+                // BUG FIX: Check if actions can be executed immediately without confirmation
+                const canExecuteImmediately = ImmediateExecutionService.canExecuteImmediately(parseResult.actions);
+                
+                if (canExecuteImmediately) {
+                  // Route to immediate execution (fixes the bug)
+                  outboundReply = await ImmediateExecutionService.executeAndFormatImmediate(
+                    mapping.userId,
+                    parseResult.actions,
+                    message.providerMessageId
+                  );
+                } else {
+                  // Route to existing confirmation flow (preserves ambiguous case behavior)
+                  await PendingActionService.createPendingAction(
+                    mapping.userId,
+                    message.normalizedPhoneNumber,
+                    message.providerMessageId,
+                    parseResult.actions
+                  );
 
-                outboundReply = parseResult.confirmationPrompt;
+                  outboundReply = parseResult.confirmationPrompt;
+                }
               } else if (parseResult.status === "BALANCE_QUERY") {
                 outboundReply = parseResult.responseText;
               } else if (parseResult.status === "NEEDS_CLARIFICATION") {
@@ -271,7 +285,7 @@ export class WhatsAppMessageService {
         responseSent: outboundReply || undefined,
         isDuplicate: false,
       };
-    } catch (error) {
+    } catch (_error) {
       await db
         .update(whatsappMessages)
         .set({
@@ -293,3 +307,6 @@ export class WhatsAppMessageService {
     }
   }
 }
+
+
+

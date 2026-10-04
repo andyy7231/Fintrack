@@ -170,7 +170,7 @@ export class PendingActionService {
 
       if (isBatchPayload(payload)) {
         // Phase 5.1: BATCH — execute atomically
-        results = await this._executeBatchAtomic(userId, payload.actions);
+        results = await this.executeBatchAtomic(userId, payload.actions);
       } else {
         // Legacy fallback: old single-action payload format
         results = [await this._executeLegacySingle(userId, action.intentType, payload as LegacyPendingActionPayload)];
@@ -217,7 +217,7 @@ export class PendingActionService {
    *    Transactions already committed are not rolled back (budget is additive/idempotent-ish).
    *    This is an acceptable trade-off since budgets are setting limits, not financial mutations.
    */
-  private static async _executeBatchAtomic(
+  public static async executeBatchAtomic(
     userId: string,
     actions: ResolvedActionPayload[]
   ): Promise<unknown[]> {
@@ -469,3 +469,4 @@ export class PendingActionService {
     return result.length > 0;
   }
 }
+

@@ -1,5 +1,5 @@
-﻿/**
- * BudgetService â€” Phase 6
+/**
+ * BudgetService — Phase 6
  *
  * Authority: READ-ONLY access to transactions. All financial mutations
  * remain with TransactionService / TransferService / AccountService.
@@ -19,22 +19,22 @@ import {
   UpdateBudgetInput,
 } from "@/schemas/budget.schema";
 
-// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Constants ─────────────────────────────────────────────────────────────────
 
 const JAKARTA_OFFSET_MS = 7 * 60 * 60 * 1000; // +07:00
 
-// â”€â”€â”€ Timezone helpers (Jakarta-consistent with dashboard.service) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Timezone helpers (Jakarta-consistent with dashboard.service) ───────────────
 
 /**
  * Convert a Jakarta-local calendar month to [startUtc, nextMonthStartUtc).
  * Uses the same arithmetic as getJakartaMonthBounds in dashboard.service.ts.
  */
 function jakartaMonthToUtcRange(year: number, month: number): { start: Date; end: Date } {
-  // Jakarta local midnight of day 1 of the month â†’ subtract offset to get UTC
+  // Jakarta local midnight of day 1 of the month → subtract offset to get UTC
   const startLocal = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
   const start = new Date(startLocal.getTime() - JAKARTA_OFFSET_MS);
 
-  // First moment of the *next* month in Jakarta â†’ UTC
+  // First moment of the *next* month in Jakarta → UTC
   const nextMonth = month === 12 ? 1 : month + 1;
   const nextYear = month === 12 ? year + 1 : year;
   const endLocal = new Date(Date.UTC(nextYear, nextMonth - 1, 1, 0, 0, 0, 0));
@@ -55,7 +55,7 @@ function jakartaDateStringToUtc(dateStr: string): Date {
 
 /**
  * Given a CUSTOM budget's endDate string "YYYY-MM-DD", compute the exclusive
- * upper bound (start of next Jakarta day â†’ UTC).
+ * upper bound (start of next Jakarta day → UTC).
  */
 function jakartaDateStringToExclusiveUtcEnd(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -96,7 +96,7 @@ function calculateRollingPeriod(
   
   return { start: startUtc, end: endUtc };
 }
-// â”€â”€â”€ DTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── DTO ───────────────────────────────────────────────────────────────────────
 
 export interface BudgetProgressDTO {
   id: string;
@@ -113,7 +113,7 @@ export interface BudgetProgressDTO {
   limitAmount: number;
   spentAmount: number;
   remainingAmount: number;
-  /** Actual ratio Ã— 100. Can exceed 100 when over budget. */
+  /** Actual ratio × 100. Can exceed 100 when over budget. */
   usagePercentage: number;
   /** Capped at 100 for visual progress bars. */
   displayPercentage: number;
@@ -121,7 +121,7 @@ export interface BudgetProgressDTO {
   currency: string;
 }
 
-// â”€â”€â”€ Category ownership helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Category ownership helper ─────────────────────────────────────────────────
 
 /**
  * Resolve a category that is accessible to userId and is of the given type.
@@ -151,7 +151,7 @@ async function resolveExpenseCategory(userId: string, categoryId: string) {
   return cat;
 }
 
-// â”€â”€â”€ Overlap / duplicate detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Overlap / duplicate detection ─────────────────────────────────────────────
 
 /**
  * Check whether any existing budget for (userId, categoryId) overlaps with
@@ -184,7 +184,7 @@ async function hasOverlappingBudget(
   return rows.length > 0;
 }
 
-// â”€â”€â”€ Spending aggregation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Spending aggregation ──────────────────────────────────────────────────────
 
 /**
  * Aggregate actual spending from transactions for a single budget.
@@ -219,12 +219,12 @@ async function aggregateSpending(
 
 /**
  * Aggregate spending for multiple budgets concurrently.
- * Uses Promise.all for concurrent DB calls â€” one per budget â€” which avoids
+ * Uses Promise.all for concurrent DB calls — one per budget — which avoids
  * sequential blocking while remaining correct across overlapping periods.
  *
  * Returns a Map<budgetId, spentAmount>.
  */
-async function aggregateSpendingBulk(
+export async function aggregateSpendingBulk(
   userId: string,
   budgetList: Array<{ id: string; categoryId: string; startDate: Date; endDate: Date }>
 ): Promise<Map<string, number>> {
@@ -244,7 +244,7 @@ async function aggregateSpendingBulk(
   return spendingMap;
 }
 
-// â”€â”€â”€ Budget calculation helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Budget calculation helper ──────────────────────────────────────────────────
 
 function calculateProgress(
   limitAmount: number,
@@ -260,12 +260,12 @@ function calculateProgress(
   };
 }
 
-// â”€â”€â”€ Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Service ───────────────────────────────────────────────────────────────────
 
 export class BudgetService {
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // BUDGET MATCHING AND VALIDATION (for expense creation)
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   /**
    * Find active applicable budget for an expense transaction.
@@ -432,7 +432,7 @@ export class BudgetService {
     }
 
     warnings.push(
-      `âš ï¸ Budget melebihi sisa! Budget tersisa: Rp${budget.remaining.toLocaleString()}, Expense: Rp${expenseAmount.toLocaleString()}. Overage Rp${overage.toLocaleString()} akan dikurangi dari free cash.`
+      `⚠️ Budget melebihi sisa! Budget tersisa: Rp${budget.remaining.toLocaleString()}, Expense: Rp${expenseAmount.toLocaleString()}. Overage Rp${overage.toLocaleString()} akan dikurangi dari free cash.`
     );
 
     return {
@@ -443,9 +443,9 @@ export class BudgetService {
       budgetId: budget.id,
     };
   }
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // CREATE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async createBudget(userId: string, input: CreateBudgetInput
   ): Promise<BudgetProgressDTO> {
@@ -521,9 +521,9 @@ export class BudgetService {
     return this.getBudgetProgress(userId, created.id);
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // GET ONE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async getBudget(
     userId: string,
@@ -536,9 +536,9 @@ export class BudgetService {
     }
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // LIST
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async listBudgets(userId: string): Promise<BudgetProgressDTO[]> {
     // 1. Fetch all budgets with category info (single query)
@@ -597,9 +597,9 @@ export class BudgetService {
     });
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // UPDATE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async updateBudget(
     userId: string,
@@ -708,9 +708,9 @@ export class BudgetService {
     return this.getBudgetProgress(userId, budgetId);
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // DELETE
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   /**
    * Delete budget. Does NOT delete any transactions.
@@ -725,9 +725,9 @@ export class BudgetService {
     return !!deleted;
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
   // GET BUDGET PROGRESS (single budget with live spending)
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async getBudgetProgress(
     userId: string,
@@ -782,9 +782,9 @@ export class BudgetService {
     };
   }
 
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // GET BUDGET SUMMARY (for dashboard â€” fetches all budgets with progress)
-  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ──────────────────────────────────────────────────────────────────────────────
+  // GET BUDGET SUMMARY (for dashboard — fetches all budgets with progress)
+  // ──────────────────────────────────────────────────────────────────────────────
 
   static async getBudgetSummary(userId: string): Promise<BudgetProgressDTO[]> {
     return this.listBudgets(userId);

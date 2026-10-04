@@ -1,8 +1,8 @@
 import { db } from "@/lib/db";
-import { transactions, accounts, categories, transfers } from "@/db/schema";
-import { eq, and, sql, gte, lte, desc, isNull, or } from "drizzle-orm";
+import { transactions, accounts, categories, transfers, budgets } from "@/db/schema";
+import { eq, and, sql, gte, lte, desc, isNull, or, lt, gt, isNotNull } from "drizzle-orm";
 
-// ─── DTO types ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ DTO types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface DashboardSummary {
   totalBalance: number; // Uang Keseluruhan (total including allocations)
@@ -76,7 +76,7 @@ export interface RecentTransaction {
   categoryColor: string | null;
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Compute the Jakarta-timezone calendar month boundaries for a given UTC Date.
@@ -106,7 +106,7 @@ function getJakartaMonthBounds(
   // Offset minutes for Asia/Jakarta is +420 (7 * 60)
   const tzOffsetMs = 7 * 60 * 60 * 1000;
 
-  // Jakarta local midnight at start of month → subtract offset to get UTC
+  // Jakarta local midnight at start of month â†’ subtract offset to get UTC
   const startLocal = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
   const start = new Date(startLocal.getTime() - tzOffsetMs); // UTC equivalent
 
@@ -145,9 +145,9 @@ const INDONESIAN_MONTHS = [
 // Fallback category colors for uncategorized items
 const FALLBACK_COLOR = "#94a3b8";
 
-// ─── service ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// ─── Period-aware KPI types ───────────────────────────────────────────────────
+// â”€â”€â”€ Period-aware KPI types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface PeriodKPIs {
   income: number;
@@ -159,9 +159,9 @@ export interface PeriodKPIs {
 }
 
 export class DashboardService {
-  // ──────────────────────────────────────────────────────────────────
-  // LEGACY: getSummary — kept for backward-compat with Phase 2 tests
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // LEGACY: getSummary â€” kept for backward-compat with Phase 2 tests
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   static async getSummary(
     userId: string,
     timezone = "Asia/Jakarta"
@@ -235,14 +235,8 @@ export class DashboardService {
       .orderBy(desc(transactions.transactionDate), desc(transactions.createdAt))
       .limit(5);
 
-    // 6. Calculate free cash across all active accounts
-    const { AccountService } = await import("./account.service");
-    let totalFreeCash = 0;
-    for (const acc of activeAccounts) {
-      const freeCash = await AccountService.getFreeCash(userId, acc.id);
-      totalFreeCash += freeCash;
-    }
-    totalFreeCash = Math.round(totalFreeCash * 100) / 100;
+    // 6. Calculate free cash across all active accounts (P4: Batch optimized)
+    const totalFreeCash = await this._calcTotalFreeCash(userId);
 
     return {
       totalBalance: Math.round(totalBalance * 100) / 100,
@@ -255,9 +249,170 @@ export class DashboardService {
     };
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // ------------------------------------------------------------------
+  // P4: Batch Free Cash Calculation
+  // ------------------------------------------------------------------
+
+  /**
+   * P4: Efficient batch calculation of total Free Cash across all active accounts.
+   * Replaces O(N×M) sequential loop with batch queries.
+   * 
+   * Formula (unchanged):
+   *   Free Cash = Account Balance - Sum(Remaining Active Budget Allocations)
+   * 
+   * Query count: 6 + N_budgets (all parallel)
+   * vs. Original: N_accounts × (5 + M_budgets_per_account × 2) sequential
+   */
+  private static async _calcTotalFreeCash(userId: string): Promise<number> {
+    // 1. Get all active accounts with initial balances
+    const activeAccounts = await db
+      .select({
+        id: accounts.id,
+        initialBalance: accounts.initialBalance,
+      })
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.isActive, true)));
+
+    if (activeAccounts.length === 0) return 0;
+
+    // 2. Batch calculate account balances (same pattern as _calcTotalNetWorth)
+    const [incomeRows, expenseRows, transferInRows, transferOutRows] =
+      await Promise.all([
+        db
+          .select({
+            accountId: transactions.accountId,
+            total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')`,
+          })
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.userId, userId),
+              eq(transactions.type, "INCOME"),
+              eq(transactions.status, "CONFIRMED")
+            )
+          )
+          .groupBy(transactions.accountId),
+
+        db
+          .select({
+            accountId: transactions.accountId,
+            total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')`,
+          })
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.userId, userId),
+              eq(transactions.type, "EXPENSE"),
+              eq(transactions.status, "CONFIRMED")
+            )
+          )
+          .groupBy(transactions.accountId),
+
+        db
+          .select({
+            accountId: transfers.toAccountId,
+            total: sql<string>`coalesce(sum(${transfers.amount}), '0.00')`,
+          })
+          .from(transfers)
+          .where(eq(transfers.userId, userId))
+          .groupBy(transfers.toAccountId),
+
+        db
+          .select({
+            accountId: transfers.fromAccountId,
+            total: sql<string>`coalesce(sum(${transfers.amount}), '0.00')`,
+          })
+          .from(transfers)
+          .where(eq(transfers.userId, userId))
+          .groupBy(transfers.fromAccountId),
+      ]);
+
+    // Build balance lookup maps
+    const incomeMap = Object.fromEntries(
+      incomeRows.map((r) => [r.accountId, parseFloat(r.total)])
+    );
+    const expenseMap = Object.fromEntries(
+      expenseRows.map((r) => [r.accountId, parseFloat(r.total)])
+    );
+    const transferInMap = Object.fromEntries(
+      transferInRows.map((r) => [r.accountId, parseFloat(r.total)])
+    );
+    const transferOutMap = Object.fromEntries(
+      transferOutRows.map((r) => [r.accountId, parseFloat(r.total)])
+    );
+
+    // Calculate balance per account
+    const accountBalances = new Map<string, number>();
+    for (const acc of activeAccounts) {
+      const balance =
+        parseFloat(acc.initialBalance) +
+        (incomeMap[acc.id] || 0) -
+        (expenseMap[acc.id] || 0) +
+        (transferInMap[acc.id] || 0) -
+        (transferOutMap[acc.id] || 0);
+      accountBalances.set(acc.id, balance);
+    }
+
+    // 3. Get all active budgets for all accounts (single query)
+    const now = new Date();
+    const activeBudgets = await db
+      .select({
+        id: budgets.id,
+        accountId: budgets.accountId,
+        categoryId: budgets.categoryId,
+        amount: budgets.amount,
+        startDate: budgets.startDate,
+        endDate: budgets.endDate,
+      })
+      .from(budgets)
+      .where(
+        and(
+          eq(budgets.userId, userId),
+          lte(budgets.startDate, now),
+          gt(budgets.endDate, now)
+        )
+      );
+
+    // 4. Batch calculate spending for all budgets (parallel via aggregateSpendingBulk)
+    const { aggregateSpendingBulk } = await import("./budget.service");
+    
+    const budgetList = activeBudgets.map((b) => ({
+      id: b.id,
+      categoryId: b.categoryId,
+      startDate: b.startDate,
+      endDate: b.endDate,
+    }));
+
+    const spendingMap = await aggregateSpendingBulk(userId, budgetList);
+
+    // 5. Calculate remaining allocations per account
+    const accountAllocations = new Map<string, number>();
+    
+    for (const budget of activeBudgets) {
+      const limitAmount = parseFloat(budget.amount);
+      const spentAmount = spendingMap.get(budget.id) || 0;
+      const remaining = Math.max(0, limitAmount - spentAmount);
+      
+      const currentAllocation = accountAllocations.get(budget.accountId!) || 0;
+      accountAllocations.set(budget.accountId!, currentAllocation + remaining);
+    }
+
+    // 6. Calculate Free Cash per account and sum
+    let totalFreeCash = 0;
+    
+    for (const acc of activeAccounts) {
+      const balance = accountBalances.get(acc.id) || 0;
+      const allocations = accountAllocations.get(acc.id) || 0;
+      const freeCash = balance - allocations;
+      totalFreeCash += freeCash;
+    }
+
+    return Math.round(totalFreeCash * 100) / 100;
+  }
+
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: KPI Cards
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getKPIs(
     userId: string,
@@ -332,9 +487,9 @@ export class DashboardService {
     };
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: 6-month Income vs Expense Trend
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getMonthlyTrend(
     userId: string,
@@ -422,9 +577,9 @@ export class DashboardService {
     });
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: Expense by Category (current month)
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getExpenseByCategory(
     userId: string,
@@ -481,9 +636,9 @@ export class DashboardService {
       .sort((a, b) => b.total - a.total);
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: Daily Expense Trend (current month)
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getDailyExpenseTrend(
     userId: string,
@@ -535,9 +690,9 @@ export class DashboardService {
     return result;
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: Account Balances Widget
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getAccountBalances(
     userId: string
@@ -633,9 +788,9 @@ export class DashboardService {
     });
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Phase 3: Recent Transactions (8)
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static async getRecentTransactions(
     userId: string,
@@ -660,13 +815,13 @@ export class DashboardService {
       .limit(limit);
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Private helpers
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Efficient total net worth calculation using a single set of aggregate queries
-   * (4 queries instead of 4×N per account).
+   * (4 queries instead of 4Ã—N per account).
    */
   private static async _calcTotalNetWorth(userId: string): Promise<number> {
     const activeAccounts = await db
@@ -755,9 +910,9 @@ export class DashboardService {
     return total;
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Period-aware: first transaction date
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Returns the earliest confirmed transaction date for the user,
@@ -777,7 +932,7 @@ export class DashboardService {
       );
 
     if (!row?.earliest) {
-      // No transactions — return start of today Jakarta
+      // No transactions â€” return start of today Jakarta
       const now = new Date();
       const jakartaMidnight = new Date(
         Date.UTC(
@@ -797,9 +952,9 @@ export class DashboardService {
     return new Date(jakartaDayStart - tzOffsetMs);
   }
 
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Period-aware KPIs: flexible date range
-  // ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Returns income, expense, net savings, and transaction count for any

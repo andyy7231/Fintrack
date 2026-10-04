@@ -236,10 +236,12 @@ export class ImmediateExecutionService {
       
       if (budgets.length === 0) return null;
       
-      // Find budget that covers current date
+      // Find budget that covers current date AND matches the category
       const now = new Date();
       const activeBudget = budgets.find(b => 
-        b.startDate <= now && b.endDate > now
+        b.categoryId === categoryId &&
+        b.startDate <= now && 
+        b.endDate > now
       );
       
       if (!activeBudget) return null;
@@ -343,5 +345,6 @@ export class ImmediateExecutionService {
     }
   }
 }
+
 
 

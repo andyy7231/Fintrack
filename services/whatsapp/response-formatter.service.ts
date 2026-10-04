@@ -580,21 +580,22 @@ export function formatSingleImmediateSuccess(r: SingleImmediateResult): string {
     );
   }
   
-  // Income/Expense format
+  // Income/Expense format with proper line breaks
   const typeLabel = r.type === "EXPENSE" ? "Pengeluaran" : "Pemasukan";
   const categoryLabel = r.categoryName || (r.type === "EXPENSE" ? "lainnya" : "pemasukan lain");
   
-  let response = 
-    `\u2705 ${typeLabel} ${categoryLabel.toLowerCase()} ${formatAmount(r.amount)} berhasil dicatat. ` +
-    `${icon}`;
+  // Build response with line breaks for readability
+  let response = `\u2705 ${typeLabel} berhasil dicatat\n\n`;
+  response += `${icon} ${categoryLabel}\n`;
+  response += `\uD83D\uDCB8 ${formatAmount(r.amount)}\n`;
   
-  // Add budget info for EXPENSE if available
+  // Add budget info for EXPENSE if available (only if budget exists for this category)
   if (r.type === "EXPENSE" && r.budgetInfo) {
-    response += ` Sisa budget ${r.budgetInfo.categoryName}: ${formatAmount(r.budgetInfo.remainingAmount)}`;
+    response += `\n\uD83D\uDCCA Sisa budget: ${formatAmount(r.budgetInfo.remainingAmount)}\n`;
   }
   
   // Always add total balance
-  response += ` \uD83D\uDCB0 Sisa uang keseluruhan: ${formatAmount(r.totalBalance)}`;
+  response += `\uD83D\uDCB0 Sisa uang keseluruhan: ${formatAmount(r.totalBalance)}`;
   
   return response;
 }
@@ -648,3 +649,4 @@ export function formatBatchImmediateSuccess(r: BatchImmediateResult): string {
   
   return response;
 }
+

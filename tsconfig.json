@@ -40,6 +40,9 @@
     "vitest.config.ts",
     ".kiro/**/*",
     "__load-test__/**/*",
-    "__profiling__/**/*"
+    "__profiling__/**/*",
+    "scripts/**/*",
+    "migrations/**/*"
   ]
 }
+

@@ -41,9 +41,13 @@ const client =
   postgres(connectionString, {
     ssl: isRemoteDb ? "require" : undefined,
     prepare: false, // Required for transaction poolers
-    max: 5,
+    max: 10, // Increased for production load
     idle_timeout: 20,
     connect_timeout: 10,
+    max_lifetime: 60 * 30, // 30 minutes
+    transform: {
+      undefined: null, // Handle undefined values
+    },
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -55,3 +59,4 @@ if (process.env.NODE_ENV !== "production") {
  * Use this for all database queries throughout the application.
  */
 export const db = drizzle(client, { schema });
+

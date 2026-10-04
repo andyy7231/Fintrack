@@ -50,7 +50,10 @@ export class AccountService {
   }
 
   /**
-   * List all accounts for the user, with their dynamically calculated exact balances
+   * [P7 OPTIMIZED] List all accounts with calculated balances
+   * Uses batch aggregation to eliminate N+1 query problem
+   * Before: 10 accounts x 8+ queries = 80+ queries
+   * After: 4 parallel batch queries total
    */
   static async getAccountsWithBalances(userId: string): Promise<AccountWithBalance[]> {
     const userAccounts = await db
@@ -61,20 +64,51 @@ export class AccountService {
 
     if (userAccounts.length === 0) return [];
 
-    // Calculate dynamic derived balance for each account:
-    // Balance = initial_balance + income - expense + incoming_transfers - outgoing_transfers
-    const results: AccountWithBalance[] = [];
+    const [incomeAgg, expenseAgg, transfersInAgg, transfersOutAgg] = await Promise.all([
+      db.select({
+          accountId: transactions.accountId,
+          total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')`,
+        }).from(transactions)
+        .where(and(eq(transactions.userId, userId), eq(transactions.type, "INCOME"), eq(transactions.status, "CONFIRMED")))
+        .groupBy(transactions.accountId),
 
-    for (const acc of userAccounts) {
-      const balance = await this.getAccountBalance(userId, acc.id, parseFloat(acc.initialBalance));
-      const freeCash = await this.getFreeCash(userId, acc.id);
-      results.push({
-        ...acc,
-        currentBalance: balance,
-        totalBalance: balance,
-        freeCash,
-      });
-    }
+      db.select({
+          accountId: transactions.accountId,
+          total: sql<string>`coalesce(sum(${transactions.amount}), '0.00')`,
+        }).from(transactions)
+        .where(and(eq(transactions.userId, userId), eq(transactions.type, "EXPENSE"), eq(transactions.status, "CONFIRMED")))
+        .groupBy(transactions.accountId),
+
+      db.select({
+          accountId: transfers.toAccountId,
+          total: sql<string>`coalesce(sum(${transfers.amount}), '0.00')`,
+        }).from(transfers)
+        .where(eq(transfers.userId, userId))
+        .groupBy(transfers.toAccountId),
+
+      db.select({
+          accountId: transfers.fromAccountId,
+          total: sql<string>`coalesce(sum(${transfers.amount}), '0.00')`,
+        }).from(transfers)
+        .where(eq(transfers.userId, userId))
+        .groupBy(transfers.fromAccountId),
+    ]);
+
+    const incomeMap = new Map(incomeAgg.map(r => [r.accountId!, parseFloat(r.total)]));
+    const expenseMap = new Map(expenseAgg.map(r => [r.accountId!, parseFloat(r.total)]));
+    const transfersInMap = new Map(transfersInAgg.map(r => [r.accountId!, parseFloat(r.total)]));
+    const transfersOutMap = new Map(transfersOutAgg.map(r => [r.accountId!, parseFloat(r.total)]));
+
+    const results: AccountWithBalance[] = userAccounts.map(acc => {
+      const initialBalance = parseFloat(acc.initialBalance);
+      const income = incomeMap.get(acc.id) || 0;
+      const expense = expenseMap.get(acc.id) || 0;
+      const transfersIn = transfersInMap.get(acc.id) || 0;
+      const transfersOut = transfersOutMap.get(acc.id) || 0;
+      const balance = Math.round((initialBalance + income - expense + transfersIn - transfersOut) * 100) / 100;
+
+      return { ...acc, currentBalance: balance, totalBalance: balance, freeCash: balance };
+    });
 
     return results;
   }

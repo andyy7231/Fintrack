@@ -29,6 +29,17 @@ function accountTypeIcon(type: string) {
   }
 }
 
+// --- Helper: Calculate "all time" KPI end date (Jakarta timezone) ------------
+
+function getJakartaTodayEnd(): Date {
+  const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
+  const now = new Date(Date.now() + TZ_OFFSET_MS);
+  const today = now.toISOString().slice(0, 10); // YYYY-MM-DD in Jakarta
+  const [y, m, d] = today.split("-").map(Number);
+  // End of day in Jakarta = 23:59:59.999 Jakarta time ? UTC
+  return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999) - TZ_OFFSET_MS);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -46,6 +57,12 @@ export default async function DashboardPage() {
   const timezone =
     ((user as Record<string, unknown>).timezone as string) || "Asia/Jakarta";
 
+  // P7 Optimization: Fetch firstTransactionDate first (needed for "all time" KPI data)
+  const firstTransactionDate = await perf.measure(
+    "DashboardPage:getFirstTransactionDate",
+    () => DashboardService.getFirstTransactionDate(user.id)
+  );
+
   // Fetch all dashboard data in parallel (server-side aggregation)
   const [
     summary,
@@ -55,7 +72,7 @@ export default async function DashboardPage() {
     accountBalances,
     budgetList,
     goalSummary,
-    firstTransactionDate,
+    initialAllKpis,
   ] = await Promise.all([
     perf.measure("DashboardPage:getSummary", () =>
       DashboardService.getSummary(user.id, timezone)
@@ -78,8 +95,9 @@ export default async function DashboardPage() {
     perf.measure("DashboardPage:getGoalSummary", () =>
       GoalService.getGoalSummary(user.id)
     ),
-    perf.measure("DashboardPage:getFirstTransactionDate", () =>
-      DashboardService.getFirstTransactionDate(user.id)
+    // P7: Fetch "all time" KPI data server-side (eliminates client duplicate fetch)
+    perf.measure("DashboardPage:getKPIsForPeriod", () =>
+      DashboardService.getKPIsForPeriod(user.id, firstTransactionDate, getJakartaTodayEnd())
     ),
   ]);
 
@@ -174,7 +192,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Period-aware KPI Cards (client component) ── */}
-        <KpiSectionClient firstDate={firstDateStr} />
+        <KpiSectionClient firstDate={firstDateStr} initialAllKpis={initialAllKpis} />
 
         {/* ── Charts Row 1: Income vs Expense | Category Donut ── */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

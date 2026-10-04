@@ -27,6 +27,8 @@ interface KpiData extends PeriodKPIs {
 interface Props {
   /** The earliest transaction date as Jakarta "YYYY-MM-DD". Used for display. */
   firstDate: string;
+  /** P7: Initial "all time" KPI data from server (eliminates client fetch) */
+  initialAllKpis?: PeriodKPIs;
 }
 
 // ─── Format helpers ───────────────────────────────────────────────────────────
@@ -240,7 +242,7 @@ function KpiSkeleton() {
 
 // ─── Main KpiSectionClient ────────────────────────────────────────────────────
 
-export function KpiSectionClient({ firstDate }: Props) {
+export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
   const today = jakartaToday();
 
   // Global period (drives all cards by default)
@@ -255,7 +257,11 @@ export function KpiSectionClient({ firstDate }: Props) {
   const [ratePeriod, setRatePeriod] = useState<CardPeriodState | null>(null);
 
   // KPI data per section
-  const [globalData, setGlobalData] = useState<KpiData | null>(null);
+  const [globalData, setGlobalData] = useState<KpiData | null>(
+    initialAllKpis 
+      ? { ...initialAllKpis, loading: false, error: false }
+      : null
+  );
   const [incomeData, setIncomeData] = useState<KpiData | null>(null);
   const [expenseData, setExpenseData] = useState<KpiData | null>(null);
   const [netData, setNetData] = useState<KpiData | null>(null);
@@ -289,8 +295,26 @@ export function KpiSectionClient({ firstDate }: Props) {
     }
   }, [fetchKpis]);
 
-  // Load global data whenever global period changes; reset card overrides
+  // P7: Load global data whenever global period changes; skip if using initialAllKpis
   useEffect(() => {
+    // Skip initial fetch if we have server-provided data and still on "all" preset
+    if (initialAllKpis && globalPreset === "all" && !globalData) {
+      setGlobalData({ ...initialAllKpis, loading: false, error: false });
+      // Reset card overrides
+      startTransition(() => {
+        setIncomePeriod(null);
+        setExpensePeriod(null);
+        setNetPeriod(null);
+        setRatePeriod(null);
+        setIncomeData(null);
+        setExpenseData(null);
+        setNetData(null);
+        setRateData(null);
+      });
+      return;
+    }
+
+    // Fetch data for non-"all" presets or if no initial data
     loadKpis(globalPreset, globalCustomStart, globalCustomEnd, setGlobalData);
     // Defer resets with startTransition to avoid cascading synchronous renders
     startTransition(() => {

@@ -38,6 +38,8 @@
     "**/*.spec.ts",
     "**/*.spec.tsx",
     "vitest.config.ts",
-    ".kiro/**/*"
+    ".kiro/**/*",
+    "__load-test__/**/*",
+    "__profiling__/**/*"
   ]
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { PeriodType, PeriodRange } from "@/lib/types/period.types";
 import { calculatePeriodRange, formatPeriodLabel } from "@/lib/utils/period.utils";
@@ -70,11 +71,7 @@ export function TransactionsClient({
 
   // Summary state (initialized from SSR)
   const [summary, setSummary] = useState<TransactionSummary>(initialSummary);
-
-  // Loading state for summary
   const [summaryLoading, setSummaryLoading] = useState(false);
-
-  // Track if this is the initial load to prevent immediate refetch
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Create Modal State
@@ -91,19 +88,47 @@ export function TransactionsClient({
   // Dynamic category filtering based on selected transaction type
   const availableCategories = categories.filter((c) => c.type === type);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setError(null);
+    if (searchParams.get("new") === "1") {
+      router.replace("/transactions", { scroll: false });
+    }
+  }, [searchParams, router]);
+
+  // Open modal automatically when ?new=1 is present in URL
+  useEffect(() => {
+    if (searchParams.get("new") === "1") {
+      setShowModal(true);
+      const defaultCat = categories.find((c) => c.type === "EXPENSE");
+      if (defaultCat) setCategoryId(defaultCat.id);
+    }
+  }, [searchParams, categories]);
+
+  // Open modal immediately when custom event is fired (e.g. from mobile header or bottom nav)
+  useEffect(() => {
+    const handleOpen = () => {
+      setShowModal(true);
+      const defaultCat = categories.find((c) => c.type === "EXPENSE");
+      if (defaultCat) setCategoryId(defaultCat.id);
+    };
+    window.addEventListener("open-new-transaction", handleOpen);
+    return () => window.removeEventListener("open-new-transaction", handleOpen);
+  }, [categories]);
+
   // Fetch transactions with all filters including period
   const fetchTransactions = useCallback(async () => {
     setSummaryLoading(true);
     
     const params = new URLSearchParams();
-
-    // Existing filters
     if (typeFilter !== "ALL") params.set("type", typeFilter);
     if (accountFilter !== "ALL") params.set("accountId", accountFilter);
     if (categoryFilter !== "ALL") params.set("categoryId", categoryFilter);
     if (search) params.set("search", search);
 
-    // Period filters
     if (periodStartDate) params.set("startDate", periodStartDate.toISOString());
     if (periodEndDate) params.set("endDate", periodEndDate.toISOString());
 
@@ -113,7 +138,6 @@ export function TransactionsClient({
 
       if (json.success) {
         setList(json.data.transactions || json.data);
-        // Update summary if present in response
         if (json.data.summary) {
           setSummary(json.data.summary);
         }
@@ -130,31 +154,22 @@ export function TransactionsClient({
     setPeriodType(type);
 
     if (type === "CUSTOM") {
-      // For CUSTOM period, use provided dates
       setPeriodStartDate(start);
       setPeriodEndDate(end);
-      
-      // Format label for custom range
       if (start && end) {
         const range: PeriodRange = { start, end };
         setPeriodLabel(formatPeriodLabel("CUSTOM", range));
       } else {
-        // Placeholder label when dates not yet selected
         setPeriodLabel("Pilih tanggal custom");
       }
     } else {
-      // For preset periods, calculate range
       const range = calculatePeriodRange(type);
       setPeriodStartDate(range.start);
       setPeriodEndDate(range.end);
-      
-      // Format label
       setPeriodLabel(formatPeriodLabel(type, range));
     }
   };
 
-  // Refetch when filters change (including period)
-  // Skip the initial fetch to use SSR data
   useEffect(() => {
     if (isInitialLoad) {
       setIsInitialLoad(false);
@@ -162,9 +177,6 @@ export function TransactionsClient({
     }
     fetchTransactions();
   }, [fetchTransactions, isInitialLoad]);
-
-  // Filtered transactions (client-side filtering already handled by API)
-  const filteredList = list;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,9 +201,8 @@ export function TransactionsClient({
       if (!json.success) {
         setError(json.error?.message || "Gagal mencatat transaksi.");
       } else {
-        // Refetch transactions after successful creation
         await fetchTransactions();
-        setShowModal(false);
+        closeModal();
         setAmount("");
         setDescription("");
       }
@@ -209,7 +220,6 @@ export function TransactionsClient({
       const res = await fetch(`/api/v1/transactions/${id}`, { method: "DELETE" });
       const json = await res.json();
       if (json.success) {
-        // Refetch transactions after successful deletion
         await fetchTransactions();
       } else {
         alert(json.error?.message || "Gagal menghapus transaksi.");
@@ -219,59 +229,100 @@ export function TransactionsClient({
     }
   };
 
+  // CSV Export utility
+  const handleExportCSV = () => {
+    if (list.length === 0) {
+      alert("Tidak ada transaksi untuk diekspor.");
+      return;
+    }
+    const headers = ["Tanggal", "Deskripsi", "Kategori", "Akun", "Tipe", "Nominal"];
+    const rows = list.map((tx) => [
+      new Date(tx.transactionDate).toISOString().split("T")[0],
+      `"${(tx.description || "").replace(/"/g, '""')}"`,
+      `"${(tx.categoryName || "Umum").replace(/"/g, '""')}"`,
+      `"${(tx.accountName || "Akun").replace(/"/g, '""')}"`,
+      tx.type,
+      tx.amount,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `fintrack-transaksi-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Header section */}
+      <header className="flex flex-wrap items-center justify-between gap-4 pb-2" data-purpose="page-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             Riwayat Transaksi
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs text-slate-500 mt-1">
             Catat dan pantau seluruh arus kas pengeluaran dan pemasukan Anda
           </p>
         </div>
-        <button
-          onClick={() => {
-            setShowModal(true);
-            setCategoryId(availableCategories[0]?.id || "");
-          }}
-          className="cursor-pointer self-start sm:self-auto rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
-        >
-          + Catat Transaksi
-        </button>
-      </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition shadow-sm cursor-pointer"
+            title="Unduh data transaksi ke CSV"
+          >
+            <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Unduh CSV</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowModal(true);
+              setCategoryId(availableCategories[0]?.id || "");
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm shadow-emerald-500/20 cursor-pointer"
+          >
+            <svg className="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>+ Catat Transaksi</span>
+          </button>
+        </div>
+      </header>
 
-      {/* Period Filter */}
-      <div className="mt-6">
-        <PeriodFilter
-          periodType={periodType}
-          onPeriodChange={handlePeriodChange}
-          startDate={periodStartDate}
-          endDate={periodEndDate}
-          periodLabel={periodLabel}
-        />
-      </div>
+      {/* KPI Summary Cards */}
+      <SummaryCards
+        income={summary.income}
+        expense={summary.expense}
+        net={summary.net}
+        isLoading={summaryLoading}
+      />
 
-      {/* Summary Cards */}
-      <div className="mt-6">
-        <SummaryCards
-          income={summary.income}
-          expense={summary.expense}
-          net={summary.net}
-          isLoading={summaryLoading}
-        />
-      </div>
+      {/* Period Filter Component */}
+      <PeriodFilter
+        periodType={periodType}
+        onPeriodChange={handlePeriodChange}
+        startDate={periodStartDate}
+        endDate={periodEndDate}
+        periodLabel={periodLabel}
+      />
 
-      {/* Filter Bar */}
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-4">
+      {/* Filter Toolbar */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 bg-white p-4 rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
         {/* Search */}
-        <div>
+        <div className="relative">
+          <svg className="w-4 h-4 absolute left-3 top-3 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
           <input
             type="text"
             placeholder="Cari deskripsi..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           />
         </div>
 
@@ -280,9 +331,9 @@ export function TransactionsClient({
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           >
-            <option value="ALL">Semua Jenis (Income & Expense)</option>
+            <option value="ALL">Semua Jenis Arus Kas</option>
             <option value="EXPENSE">Hanya Pengeluaran (Expense)</option>
             <option value="INCOME">Hanya Pemasukan (Income)</option>
           </select>
@@ -293,9 +344,9 @@ export function TransactionsClient({
           <select
             value={accountFilter}
             onChange={(e) => setAccountFilter(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           >
-            <option value="ALL">Semua Akun</option>
+            <option value="ALL">Semua Akun / Dompet</option>
             {accounts.map((acc) => (
               <option key={acc.id} value={acc.id}>
                 {acc.name}
@@ -309,115 +360,153 @@ export function TransactionsClient({
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
           >
             <option value="ALL">Semua Kategori</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.name} ({cat.type})
+                {cat.name} ({cat.type === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-4 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+      {/* Transactions Table */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800 text-left text-xs">
-            <thead className="bg-zinc-50 dark:bg-zinc-850 text-zinc-500 dark:text-zinc-400">
+          <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
+            <thead className="bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-4 py-3 font-semibold">Tanggal</th>
-                <th className="px-4 py-3 font-semibold">Deskripsi</th>
-                <th className="px-4 py-3 font-semibold">Kategori</th>
-                <th className="px-4 py-3 font-semibold">Akun</th>
-                <th className="px-4 py-3 font-semibold">Tipe</th>
-                <th className="px-4 py-3 font-semibold text-right">Nominal</th>
-                <th className="px-4 py-3 font-semibold text-right">Aksi</th>
+                <th className="px-5 py-3.5">Tanggal</th>
+                <th className="px-5 py-3.5">Deskripsi</th>
+                <th className="px-5 py-3.5">Kategori</th>
+                <th className="px-5 py-3.5">Akun</th>
+                <th className="px-5 py-3.5">Tipe</th>
+                <th className="px-5 py-3.5 text-right">Nominal</th>
+                <th className="px-5 py-3.5 text-right">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {filteredList.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 font-medium">
+              {list.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-zinc-500">
-                    Tidak ada transaksi yang cocok dengan filter.
+                  <td colSpan={7} className="px-5 py-12 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      <p className="text-xs font-semibold text-slate-600">Tidak ada transaksi ditemukan</p>
+                      <p className="text-[11px] text-slate-400">Coba ubah filter atau catat transaksi baru</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredList.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
-                    <td className="px-4 py-3.5 whitespace-nowrap text-zinc-600 dark:text-zinc-300">
-                      {new Date(tx.transactionDate).toLocaleDateString("id-ID", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="px-4 py-3.5 font-medium text-zinc-900 dark:text-zinc-100">
-                      {tx.description}
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                        {tx.categoryName || "Umum"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-zinc-600 dark:text-zinc-300">
-                      {tx.accountName || "Akun"}
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                          tx.type === "INCOME"
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400"
-                            : "bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-400"
+                list.map((tx) => {
+                  const isIncome = tx.type === "INCOME";
+                  const dateObj = new Date(tx.transactionDate);
+                  return (
+                    <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-3.5 whitespace-nowrap text-slate-500 font-medium">
+                        {dateObj.toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-900 font-semibold max-w-xs truncate">
+                        {tx.description}
+                        {tx.source === "WHATSAPP" && (
+                          <span className="ml-1.5 text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                            WA
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-700 px-2.5 py-1 text-[11px] font-semibold border border-slate-200/60">
+                          <span
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: tx.categoryColor || "#10B981" }}
+                          />
+                          {tx.categoryName || "Umum"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap text-slate-600">
+                        <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 px-2 py-0.5 rounded-md text-[11px] border border-slate-200/50">
+                          {tx.accountName || "Akun"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            isIncome
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                              : ""
+                          }`}
+                          style={!isIncome ? {background:'rgba(255,10,84,0.08)',color:'#FF0A54',border:'1px solid rgba(255,10,84,0.20)'} : {}}
+                        >
+                          {isIncome ? "Pemasukan" : "Pengeluaran"}
+                        </span>
+                      </td>
+                      <td
+                        className={`px-5 py-3.5 whitespace-nowrap text-right font-bold ${
+                          isIncome ? "text-emerald-600" : ""
                         }`}
+                        style={!isIncome ? {color:'#FF0A54'} : {}}
                       >
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td
-                      className={`px-4 py-3.5 whitespace-nowrap text-right font-semibold ${
-                        tx.type === "INCOME"
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-zinc-900 dark:text-zinc-100"
-                      }`}
-                    >
-                      {tx.type === "INCOME" ? "+" : "-"}
-                      {formatCurrency(parseFloat(tx.amount))}
-                    </td>
-                    <td className="px-4 py-3.5 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => handleDelete(tx.id, tx.description)}
-                        className="cursor-pointer text-red-600 hover:text-red-700 font-medium"
-                      >
-                        Hapus
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        {isIncome ? "+" : "-"} {formatCurrency(parseFloat(tx.amount))}
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => handleDelete(tx.id, tx.description)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#FF0A54] hover:bg-[rgba(255,10,84,0.08)] transition cursor-pointer"
+                          title="Hapus transaksi"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Modal Add Transaction */}
+      {/* Modal Add Transaction (Stitch Style) */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Catat Transaksi Baru
-            </h2>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl border border-slate-100"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900">
+                Catat Transaksi Baru
+              </h2>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
 
             {error && (
-              <div className="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-400">
+              <div className="mt-3 rounded-xl p-3 text-xs" style={{background:'rgba(255,10,84,0.07)',border:'1px solid rgba(255,10,84,0.20)',color:'#c0003b'}}>
                 {error}
               </div>
             )}
 
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
               {/* Type Switcher */}
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -425,13 +514,14 @@ export function TransactionsClient({
                     const newCats = categories.filter((c) => c.type === "EXPENSE");
                     setCategoryId(newCats[0]?.id || "");
                   }}
-                  className={`cursor-pointer rounded-lg py-2 text-xs font-semibold transition-colors ${
+                  className={`cursor-pointer rounded-lg py-2 text-xs font-bold transition-all ${
                     type === "EXPENSE"
-                      ? "bg-white text-red-600 shadow-xs dark:bg-zinc-900 dark:text-red-400"
-                      : "text-zinc-600 dark:text-zinc-400"
+                      ? "bg-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
+                  style={type === "EXPENSE" ? {color:'#FF0A54'} : {}}
                 >
-                  Pengeluaran (Expense)
+                  Pengeluaran
                 </button>
                 <button
                   type="button"
@@ -440,18 +530,18 @@ export function TransactionsClient({
                     const newCats = categories.filter((c) => c.type === "INCOME");
                     setCategoryId(newCats[0]?.id || "");
                   }}
-                  className={`cursor-pointer rounded-lg py-2 text-xs font-semibold transition-colors ${
+                  className={`cursor-pointer rounded-lg py-2 text-xs font-bold transition-all ${
                     type === "INCOME"
-                      ? "bg-white text-emerald-600 shadow-xs dark:bg-zinc-900 dark:text-emerald-400"
-                      : "text-zinc-600 dark:text-zinc-400"
+                      ? "bg-white text-emerald-600 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
                 >
-                  Pemasukan (Income)
+                  Pemasukan
                 </button>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nominal (Rp)
                 </label>
                 <input
@@ -459,39 +549,39 @@ export function TransactionsClient({
                   min="1"
                   step="any"
                   required
-                  placeholder="Contoh: 25000"
+                  placeholder="Contoh: 50000"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Akun Keuangan
                 </label>
                 <select
                   required
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 >
                   {accounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
-                      {acc.name}
+                      {acc.name} ({acc.currency})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Kategori ({type === "EXPENSE" ? "Pengeluaran" : "Pemasukan"})
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 >
                   <option value="">-- Tanpa Kategori --</option>
                   {availableCategories.map((cat) => (
@@ -503,44 +593,44 @@ export function TransactionsClient({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Deskripsi Transaksi
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Makan siang, Gaji bulanan, Bensin"
+                  placeholder="Contoh: Makan siang, Gaji bulanan, Kopi"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                  Tanggal
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tanggal Transaksi
                 </label>
                 <input
                   type="date"
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
-              <div className="mt-6 flex justify-end space-x-2">
+              <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="cursor-pointer rounded-lg border border-zinc-300 px-4 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  onClick={closeModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {loading ? "Menyimpan..." : "Simpan Transaksi"}
                 </button>

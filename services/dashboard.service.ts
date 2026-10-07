@@ -145,6 +145,49 @@ const INDONESIAN_MONTHS = [
 // Fallback category colors for uncategorized items
 const FALLBACK_COLOR = "#94a3b8";
 
+export const CANONICAL_CATEGORY_COLORS: Record<string, string> = {
+  // Expenses
+  "makanan & minuman": "#EF4444",
+  "transportasi": "#F97316",
+  "tempat tinggal": "#F59E0B",
+  "tagihan & utilitas": "#EAB308",
+  "tagihan": "#EAB308",
+  "belanja": "#EC4899",
+  "kesehatan": "#14B8A6",
+  "pendidikan": "#8B5CF6",
+  "hiburan": "#A855F7",
+  "lainnya": "#64748B",
+  "pengeluaran lain": "#9CA3AF",
+  "kos": "#F59E0B",
+
+  // Incomes
+  "gaji": "#10B981",
+  "bonus": "#059669",
+  "freelance": "#0D9488",
+  "bisnis": "#0284C7",
+  "investasi": "#7C3AED",
+  "hadiah": "#6366F1",
+  "pemasukan lain": "#6B7280",
+};
+
+export const DIVERSE_CATEGORY_PALETTE = [
+  "#EC4899", // Belanja (Pink/Magenta)
+  "#EF4444", // Makanan & Minuman (Coral Red)
+  "#EAB308", // Tagihan & Utilitas (Yellow/Gold)
+  "#F97316", // Transportasi (Orange)
+  "#14B8A6", // Kesehatan (Teal)
+  "#8B5CF6", // Pendidikan (Purple)
+  "#A855F7", // Hiburan (Violet)
+  "#06B6D4", // Cyan
+  "#10B981", // Emerald
+  "#3B82F6", // Blue
+  "#F43F5E", // Rose
+  "#84CC16", // Lime
+  "#6366F1", // Indigo
+  "#D946EF", // Fuchsia
+  "#64748B", // Slate
+];
+
 // â”€â”€â”€ service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // â”€â”€â”€ Period-aware KPI types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -622,11 +665,18 @@ export class DashboardService {
 
     const grandTotal = rows.reduce((acc, r) => acc + parseFloat(r.total), 0);
 
-    return rows
+    const mapped = rows
       .map((r) => ({
         categoryId: r.categoryId,
         categoryName: r.categoryName,
-        categoryColor: r.categoryColor || FALLBACK_COLOR,
+        categoryColor:
+          r.categoryColor && r.categoryColor !== FALLBACK_COLOR
+            ? r.categoryColor
+            : CANONICAL_CATEGORY_COLORS[(r.categoryName || "").toLowerCase().trim()] ||
+              DIVERSE_CATEGORY_PALETTE[
+                Math.abs((r.categoryName || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0)) %
+                  DIVERSE_CATEGORY_PALETTE.length
+              ],
         total: Math.round(parseFloat(r.total) * 100) / 100,
         percentage:
           grandTotal > 0
@@ -634,6 +684,17 @@ export class DashboardService {
             : 0,
       }))
       .sort((a, b) => b.total - a.total);
+
+    const usedColors = new Set<string>();
+    return mapped.map((item) => {
+      let color = item.categoryColor;
+      if (usedColors.has(color.toLowerCase())) {
+        const alt = DIVERSE_CATEGORY_PALETTE.find((c) => !usedColors.has(c.toLowerCase()));
+        if (alt) color = alt;
+      }
+      usedColors.add(color.toLowerCase());
+      return { ...item, categoryColor: color };
+    });
   }
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

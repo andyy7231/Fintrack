@@ -41,7 +41,7 @@ function now() {
     month: parseInt(
       d.toLocaleDateString("en-US", { timeZone: "Asia/Jakarta", month: "numeric" })
     ),
-    date: d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }), // YYYY-MM-DD
+    date: d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }),
   };
 }
 
@@ -52,11 +52,11 @@ const MONTH_NAMES = [
 
 function getPeriodTypeLabel(periodType: string): string {
   switch (periodType) {
-    case "MONTHLY": return "Budget Bulanan";
-    case "ROLLING_30_DAYS": return "Budget 30 Hari";
-    case "ROLLING_7_DAYS": return "Budget 7 Hari";
-    case "ROLLING_90_DAYS": return "Budget 90 Hari";
-    case "CUSTOM": return "Budget Custom";
+    case "MONTHLY": return "Bulanan";
+    case "ROLLING_30_DAYS": return "30 Hari";
+    case "ROLLING_7_DAYS": return "7 Hari";
+    case "ROLLING_90_DAYS": return "90 Hari";
+    case "CUSTOM": return "Custom";
     default: return periodType;
   }
 }
@@ -82,8 +82,6 @@ function getRemainingDays(endDate: Date | string): number {
 function calculateRollingPeriodPreview(startDate: string | null, durationDays: number): { start: string; end: string } {
   const start = startDate ? new Date(startDate + "T00:00:00") : new Date();
   const end = new Date(start.getTime() + durationDays * 24 * 60 * 60 * 1000);
-  
-  // FIX 1: Display last included date (end - 1 day) since backend uses exclusive upper bound
   const displayEnd = new Date(end.getTime() - 24 * 60 * 60 * 1000);
   
   return {
@@ -102,16 +100,17 @@ function getDefaultAccountId(accounts: AccountOption[]): string {
 // ─── Progress bar ───────────────────────────────────────────────────────────────
 
 function ProgressBar({ pct, over }: { pct: number; over: boolean }) {
-  const color = over ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500";
+  const color = over ? "" : pct >= 80 ? "bg-amber-500" : "bg-emerald-500";
   return (
-    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+    <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-slate-100">
       <div
         className={`h-2 rounded-full transition-all duration-500 ${color}`}
-        style={{ width: `${Math.min(pct, 100)}%` }}
+        style={{ width: `${Math.min(pct, 100)}%`, ...(over ? { background: '#FF0A54' } : {}) }}
       />
     </div>
   );
 }
+
 // ─── Budget Card ────────────────────────────────────────────────────────────────
 
 function BudgetCard({
@@ -143,7 +142,6 @@ function BudgetCard({
   };
 
   const periodLabel = getPeriodTypeLabel(budget.periodType);
-  // FIX 2: Display last included date (endDate - 1 day) for rolling/custom periods
   const endDateObj = toSafeDate(budget.endDate);
   const displayEndDate = new Date(endDateObj.getTime() - 24 * 60 * 60 * 1000);
   const periodRange = `${formatIndonesianDate(budget.startDate)} - ${formatIndonesianDate(displayEndDate)}`;
@@ -151,108 +149,112 @@ function BudgetCard({
   const fundingAccount = accounts?.find((a) => a.id === (budget as { accountId?: string | null }).accountId);
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          {budget.categoryIcon && <span className="text-xl">{budget.categoryIcon}</span>}
-          <span
-            className="h-3 w-3 shrink-0 rounded-full"
-            style={{ backgroundColor: budget.categoryColor ?? "#94a3b8" }}
-          />
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-zinc-900 dark:text-zinc-100">
-              {budget.categoryName}
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
-                {periodLabel}
-              </span>
-              {fundingAccount && (
-                <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                  {fundingAccount.name}
+    <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-md transition-all">
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+              style={{
+                backgroundColor: budget.categoryColor ? `${budget.categoryColor}15` : "#e8fdf3",
+                color: budget.categoryColor || "#10B981",
+              }}
+            >
+              {budget.categoryIcon || "🏷️"}
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-slate-900 truncate">
+                {budget.categoryName}
+              </h3>
+              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                <span className="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">
+                  {periodLabel}
                 </span>
-              )}
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {remainingDays > 0 ? `${remainingDays} hari lagi` : "Berakhir"}
-              </p>
+                {fundingAccount && (
+                  <span className="text-[10px] text-slate-400">
+                    • {fundingAccount.name}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-            confirming
-              ? "bg-red-600 text-white hover:bg-red-700"
-              : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-          }`}
-        >
-          {isPending ? "..." : confirming ? "Konfirmasi Hapus" : "Hapus"}
-        </button>
-      </div>
-
-      {/* Period Range */}
-      <div className="mt-2">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{periodRange}</p>
-      </div>
-
-      {/* Amounts */}
-      <div className="mt-4 flex items-end justify-between">
-        <div>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Terpakai</p>
-          <p
-            className={`text-xl font-bold ${
-              budget.isOverBudget
-                ? "text-red-600 dark:text-red-400"
-                : "text-zinc-900 dark:text-zinc-100"
+          <button
+            onClick={handleDelete}
+            disabled={isPending}
+            className={`cursor-pointer rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+              confirming
+                ? "bg-[#FF0A54] text-white hover:bg-[#d50040]"
+                : "text-slate-400 hover:text-[#FF0A54] hover:bg-[rgba(255,10,84,0.08)]"
             }`}
           >
-            {formatCurrency(budget.spentAmount)}
-          </p>
+            {isPending ? "..." : confirming ? "Konfirmasi Hapus" : "Hapus"}
+          </button>
         </div>
-        <div className="text-right">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Batas</p>
-          <p className="text-base font-semibold text-zinc-700 dark:text-zinc-300">
-            {formatCurrency(budget.limitAmount)}
-          </p>
+
+        {/* Period Range & Days Left */}
+        <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 pt-2.5">
+          <span>{periodRange}</span>
+          <span className={`font-semibold ${remainingDays <= 3 ? "text-amber-600" : "text-slate-500"}`}>
+            {remainingDays > 0 ? `${remainingDays} hari tersisa` : "Berakhir"}
+          </span>
         </div>
+
+        {/* Amounts */}
+        <div className="mt-4 flex items-baseline justify-between">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Terpakai</span>
+            <p className={`text-xl font-bold tracking-tight ${budget.isOverBudget ? "" : "text-slate-900"}`} style={budget.isOverBudget ? {color:'#FF0A54'} : {}}>
+              {formatCurrency(budget.spentAmount)}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Batas</span>
+            <p className="text-sm font-semibold text-slate-600">
+              {formatCurrency(budget.limitAmount)}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <ProgressBar pct={budget.displayPercentage} over={budget.isOverBudget} />
       </div>
 
-      {/* Progress */}
-      <ProgressBar pct={budget.displayPercentage} over={budget.isOverBudget} />
-
-      {/* Status */}
-      <div className="mt-2 flex items-center justify-between text-xs">
+      {/* Status Footer */}
+      <div className="mt-3.5 flex items-center justify-between text-xs pt-2.5 border-t border-slate-100">
         <span
-          className={
+          className={`font-semibold text-[11px] ${
             budget.isOverBudget
-              ? "font-medium text-red-600 dark:text-red-400"
+              ? ""
               : budget.usagePercentage >= 80
-              ? "font-medium text-amber-600 dark:text-amber-400"
-              : "text-zinc-500 dark:text-zinc-400"
-          }
+              ? "text-amber-600"
+              : "text-emerald-600"
+          }`}
+          style={budget.isOverBudget ? {color:'#FF0A54'} : {}}
         >
           {budget.isOverBudget
             ? `⚠ Melebihi ${formatCurrency(Math.abs(budget.remainingAmount))}`
             : `Sisa ${formatCurrency(budget.remainingAmount)}`}
         </span>
-        <span className="text-zinc-400 dark:text-zinc-500">
+        <span className="font-bold text-slate-500 text-[11px]">
           {budget.usagePercentage.toFixed(1)}%
         </span>
       </div>
     </div>
   );
 }
-// ─── Create Budget Form ─────────────────────────────────────────────────────────
 
-function CreateBudgetForm({
+// ─── Create Budget Form Modal ───────────────────────────────────────────────────
+
+function CreateBudgetModal({
   categories,
   accounts,
+  onClose,
   onCreated,
 }: {
   categories: Category[];
   accounts: AccountOption[];
+  onClose: () => void;
   onCreated: (budget: BudgetProgressDTO) => void;
 }) {
   const { year: thisYear, month: thisMonth, date: today } = now();
@@ -268,7 +270,6 @@ function CreateBudgetForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Calculate preview for rolling periods
   const periodPreview = useMemo(() => {
     if (periodType === "ROLLING_7_DAYS") {
       return calculateRollingPeriodPreview(startDate || null, 7);
@@ -300,18 +301,17 @@ function CreateBudgetForm({
       body = { periodType, accountId, categoryId, amount: parseFloat(amount), year, month };
     } else if (periodType === "CUSTOM") {
       if (!startDate || !customEndDate) {
-        setError("Tanggal mulai dan tanggal akhir harus diisi untuk budget custom");
+        setError("Tanggal mulai dan tanggal akhir wajib diisi");
         return;
       }
       body = { periodType, accountId, categoryId, amount: parseFloat(amount), startDate, endDate: customEndDate };
     } else {
-      // Rolling periods
-      body = { 
+      body = {
         periodType,
         accountId,
-        categoryId, 
+        categoryId,
         amount: parseFloat(amount),
-        ...(startDate && { startDate }),
+        ...(startDate ? { startDate } : {}),
       };
     }
 
@@ -322,17 +322,15 @@ function CreateBudgetForm({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
-        const json = await res.json();
 
-        if (!res.ok || !json.success) {
-          setError(json.error?.message ?? "Gagal membuat budget");
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error?.message ?? "Gagal membuat budget");
           return;
         }
 
-        onCreated(json.data);
-        setAmount("");
-        setStartDate("");
-        setCustomEndDate("");
+        onCreated(data.data);
+        onClose();
       } catch {
         setError("Terjadi kesalahan jaringan");
       }
@@ -340,207 +338,237 @@ function CreateBudgetForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900"
-    >
-      <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-        + Buat Budget Baru
-      </h2>
-
-      {/* Period type selector */}
-      <div className="mb-4">
-        <label className="mb-2 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-          Tipe Periode Budget
-        </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {(["MONTHLY", "ROLLING_7_DAYS", "ROLLING_30_DAYS", "ROLLING_90_DAYS", "CUSTOM"] as const).map((t) => (
-            <button
-              type="button"
-              key={t}
-              onClick={() => setPeriodType(t)}
-              className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                periodType === t
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300"
-              }`}
-            >
-              {t === "MONTHLY" && "Bulanan"}
-              {t === "ROLLING_7_DAYS" && "7 Hari"}
-              {t === "ROLLING_30_DAYS" && "30 Hari"}
-              {t === "ROLLING_90_DAYS" && "90 Hari"}
-              {t === "CUSTOM" && "Custom"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {/* Funding Account */}
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            Akun Sumber Dana
-          </label>
-          <select
-            value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            required
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-900">
+            Buat Budget Baru
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
           >
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name} • {formatCurrency(acc.currentBalance, acc.currency)}
-              </option>
-            ))}
-          </select>
+            ✕
+          </button>
         </div>
 
-        {/* Category */}
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            Kategori Pengeluaran
-          </label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            required
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.icon ? `${c.icon} ` : ""}{c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          {/* Period Type Selection Pills */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Tipe Periode Budget
+            </label>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 rounded-xl bg-slate-100 p-1">
+              {(
+                [
+                  "ROLLING_30_DAYS",
+                  "MONTHLY",
+                  "ROLLING_7_DAYS",
+                  "ROLLING_90_DAYS",
+                  "CUSTOM",
+                ] as PeriodType[]
+              ).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setPeriodType(t)}
+                  className={`rounded-lg py-1.5 text-[11px] font-bold transition-all ${
+                    periodType === t
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {t === "ROLLING_30_DAYS" && "30 Hari"}
+                  {t === "MONTHLY" && "Bulanan"}
+                  {t === "ROLLING_7_DAYS" && "7 Hari"}
+                  {t === "ROLLING_90_DAYS" && "90 Hari"}
+                  {t === "CUSTOM" && "Custom"}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        {/* Period-specific fields */}
-        {periodType === "MONTHLY" ? (
-          <>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Bulan
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Funding Account */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Akun Sumber Dana
               </label>
               <select
-                value={month}
-                onChange={(e) => setMonth(parseInt(e.target.value))}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                value={accountId}
+                onChange={(e) => setAccountId(e.target.value)}
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               >
-                {MONTH_NAMES.map((name, idx) => (
-                  <option key={idx + 1} value={idx + 1}>
-                    {name}
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} • {formatCurrency(acc.currentBalance, acc.currency)}
                   </option>
                 ))}
               </select>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Tahun
+
+            {/* Category */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Kategori Pengeluaran
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                required
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon ? `${c.icon} ` : ""}{c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Period-specific fields */}
+            {periodType === "MONTHLY" ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Bulan
+                  </label>
+                  <select
+                    value={month}
+                    onChange={(e) => setMonth(parseInt(e.target.value))}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  >
+                    {MONTH_NAMES.map((name, idx) => (
+                      <option key={idx + 1} value={idx + 1}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tahun
+                  </label>
+                  <input
+                    type="number"
+                    value={year}
+                    onChange={(e) => setYear(parseInt(e.target.value))}
+                    min={2020}
+                    max={2100}
+                    required
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+              </>
+            ) : periodType === "CUSTOM" ? (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tanggal Akhir
+                  </label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Tanggal Mulai (Opsional)
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  placeholder={today}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Kosongkan untuk mulai hari ini
+                </p>
+              </div>
+            )}
+
+            {/* Amount */}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Batas Budget (IDR)
               </label>
               <input
                 type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
-                min={2020}
-                max={2100}
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min={1}
                 required
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                placeholder="Contoh: 1500000"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
-          </>
-        ) : periodType === "CUSTOM" ? (
-          <>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Tanggal Mulai
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                Tanggal Akhir
-              </label>
-              <input
-                type="date"
-                value={customEndDate}
-                onChange={(e) => setCustomEndDate(e.target.value)}
-                required
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-              />
-            </div>
-          </>
-        ) : (
-          // Rolling periods
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              Tanggal Mulai (Opsional)
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              placeholder={today}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            />
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Kosongkan untuk mulai hari ini
-            </p>
           </div>
-        )}
 
-        {/* Amount */}
-        <div className="sm:col-span-2">
-          <label className="mb-1 block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-            Batas Budget (IDR)
-          </label>
-          <input
-            type="number"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            min={1}
-            required
-            placeholder="Contoh: 1500000"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          />
-        </div>
+          {/* Period Preview */}
+          {periodPreview && (
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200/80 px-3 py-2 text-xs text-emerald-800">
+              <strong>Preview Periode:</strong> {periodPreview.start} – {periodPreview.end}
+              {periodType === "ROLLING_7_DAYS" && " (7 hari)"}
+              {periodType === "ROLLING_30_DAYS" && " (30 hari)"}
+              {periodType === "ROLLING_90_DAYS" && " (90 hari)"}
+            </div>
+          )}
+
+          {error && (
+            <p className="rounded-xl px-3 py-2 text-xs" style={{background:'rgba(255,10,84,0.07)',border:'1px solid rgba(255,10,84,0.20)',color:'#c0003b'}}>
+              {error}
+            </p>
+          )}
+
+          <div className="pt-2 flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={isPending || categories.length === 0 || accounts.length === 0}
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+            >
+              {isPending ? "Menyimpan…" : "Simpan Budget"}
+            </button>
+          </div>
+        </form>
       </div>
-
-      {/* Period Preview */}
-      {periodPreview && (
-        <div className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950/40 dark:text-blue-400">
-          <strong>Preview Periode:</strong> {periodPreview.start} – {periodPreview.end}
-          {periodType === "ROLLING_7_DAYS" && " (7 hari)"}
-          {periodType === "ROLLING_30_DAYS" && " (30 hari)"}
-          {periodType === "ROLLING_90_DAYS" && " (90 hari)"}
-        </div>
-      )}
-
-      {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-400">
-          {error}
-        </p>
-      )}
-
-      <button
-        type="submit"
-        disabled={isPending || categories.length === 0 || accounts.length === 0}
-        className="mt-4 w-full rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-      >
-        {isPending ? "Menyimpan…" : "Simpan Budget"}
-      </button>
-    </form>
+    </div>
   );
 }
+
 // ─── Main Client Component ──────────────────────────────────────────────────────
 
 export function BudgetsClient({ initialBudgets, expenseCategories, accounts }: BudgetsClientProps) {
   const [budgets, setBudgets] = useState<BudgetProgressDTO[]>(initialBudgets);
+  const [showModal, setShowModal] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "SAFE" | "NEAR" | "OVER">("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"PERCENT_DESC" | "AMOUNT_DESC" | "REMAINING_ASC" | "NAME">("PERCENT_DESC");
 
   const handleCreated = (budget: BudgetProgressDTO) => {
     setBudgets((prev) => [budget, ...prev]);
@@ -550,76 +578,316 @@ export function BudgetsClient({ initialBudgets, expenseCategories, accounts }: B
     setBudgets((prev) => prev.filter((b) => b.id !== id));
   };
 
+  // Calculations for KPI Cards
+  const totalBudget = useMemo(() => budgets.reduce((acc, b) => acc + b.limitAmount, 0), [budgets]);
+  const totalSpent = useMemo(() => budgets.reduce((acc, b) => acc + b.spentAmount, 0), [budgets]);
+  const totalRemaining = totalBudget - totalSpent;
+  const totalPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+
+  // Account balances & Free cash
+  const totalAccountBalance = useMemo(
+    () => accounts.reduce((acc, a) => acc + a.currentBalance, 0),
+    [accounts]
+  );
+  const freeCash = Math.max(0, totalAccountBalance - totalBudget);
+
   const overBudgetCount = budgets.filter((b) => b.isOverBudget).length;
-  const nearLimitCount = budgets.filter(
-    (b) => !b.isOverBudget && b.usagePercentage >= 80
-  ).length;
+  const nearLimitCount = budgets.filter((b) => !b.isOverBudget && b.usagePercentage >= 80).length;
+  const safeCount = budgets.filter((b) => !b.isOverBudget && b.usagePercentage < 80).length;
+
+  // Filtering & Sorting
+  const filteredBudgets = useMemo(() => {
+    return budgets
+      .filter((b) => {
+        if (statusFilter === "SAFE" && (b.isOverBudget || b.usagePercentage >= 80)) return false;
+        if (statusFilter === "NEAR" && (b.isOverBudget || b.usagePercentage < 80)) return false;
+        if (statusFilter === "OVER" && !b.isOverBudget) return false;
+        if (searchQuery.trim() && !b.categoryName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "PERCENT_DESC") return b.usagePercentage - a.usagePercentage;
+        if (sortBy === "AMOUNT_DESC") return b.limitAmount - a.limitAmount;
+        if (sortBy === "REMAINING_ASC") return a.remainingAmount - b.remainingAmount;
+        if (sortBy === "NAME") return a.categoryName.localeCompare(b.categoryName);
+        return 0;
+      });
+  }, [budgets, statusFilter, searchQuery, sortBy]);
 
   return (
     <div className="space-y-6">
-      {/* Summary banner */}
-      {budgets.length > 0 && (overBudgetCount > 0 || nearLimitCount > 0) && (
-        <div
-          className={`rounded-2xl p-4 text-sm font-medium ${
-            overBudgetCount > 0
-              ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-              : "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-          }`}
-        >
-          {overBudgetCount > 0
-            ? `⚠ ${overBudgetCount} budget melebihi batas pengeluaran`
-            : `⚡ ${nearLimitCount} budget mendekati batas (≥80%)`}
+      {/* Header */}
+      <header className="flex flex-wrap items-center justify-between gap-4 pb-2" data-purpose="page-header">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Manajemen Budget
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Alokasikan batas belanja per kategori & pantau realisasi keuangan
+          </p>
         </div>
-      )}
+        <button
+          onClick={() => setShowModal(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-emerald-500/20 transition cursor-pointer"
+        >
+          <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M12 4v16m8-8H4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>+ Buat Budget</span>
+        </button>
+      </header>
 
-      {/* Create form or empty state */}
+      {/* Top KPI Cards (Stitch Style) */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-5" data-purpose="kpi-summary-grid">
+        {/* 1. Total Budget Card */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 truncate">Total Budget</span>
+            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 min-w-0">
+            <div
+              title={formatCurrency(totalBudget)}
+              className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight whitespace-nowrap truncate"
+            >
+              {formatCurrency(totalBudget)}
+            </div>
+            <div className="flex items-center gap-1.5 mt-2 text-slate-400 text-[11px] truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate">{budgets.length} Budget Aktif</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Terpakai (Spent) Card */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-500 truncate">Terpakai (Realisasi)</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 min-w-0">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span
+                title={formatCurrency(totalSpent)}
+                className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight whitespace-nowrap truncate"
+              >
+                {formatCurrency(totalSpent)}
+              </span>
+              <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/70 shrink-0">
+                {totalPercentage.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2 text-slate-400 text-[11px] truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+              <span className="truncate">Total realisasi belanja</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Sisa Budget (Remaining) Card */}
+        <div className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 border border-emerald-200/70 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col justify-between overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-emerald-800 truncate">Sisa Budget Tersedia</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 min-w-0">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span
+                title={formatCurrency(totalRemaining)}
+                className={`text-xl sm:text-2xl font-bold tracking-tight whitespace-nowrap truncate ${totalRemaining >= 0 ? "text-emerald-700" : ""}`}
+                style={totalRemaining < 0 ? {color:'#FF0A54'} : {}}
+              >
+                {totalRemaining >= 0 ? "+ " : ""}{formatCurrency(totalRemaining)}
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                {(100 - Math.min(totalPercentage, 100)).toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2 text-emerald-700/80 text-[11px] truncate">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="truncate">Kapasitas belanja aman</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FreeCashContextCallout (Dark Banner Stitch Style) */}
+      <section className="bg-gradient-to-r from-[#10221c] to-[#0a1612] text-white rounded-2xl p-5 border border-[#1b382d] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 shadow-sm" data-purpose="accounting-context-callout">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
+              Prinsip Alokasi Kas & Komitmen FinTrack
+            </div>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed max-w-2xl">
+              Pengeluaran riil memotong budget kategori & saldo riil, sementara alokasi budget menjaga ketersediaan <span className="text-white font-semibold">Free Cash</span> tanpa pemotongan saldo ganda.
+            </p>
+          </div>
+        </div>
+        {/* Live Metric Pills */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+          <div className="bg-[#162b24] px-3.5 py-2 rounded-xl border border-[#214337] text-left">
+            <div className="text-[10px] text-slate-400 font-medium">Saldo Akun</div>
+            <div className="text-xs font-bold text-white">{formatCurrency(totalAccountBalance)}</div>
+          </div>
+          <div className="bg-[#162b24] px-3.5 py-2 rounded-xl border border-[#214337] text-left">
+            <div className="text-[10px] text-slate-400 font-medium">Komitmen Budget</div>
+            <div className="text-xs font-bold text-amber-300">{formatCurrency(totalBudget)}</div>
+          </div>
+          <div className="bg-[#162b24] px-3.5 py-2 rounded-xl border border-[#214337] text-left">
+            <div className="text-[10px] text-slate-400 font-medium">Free Cash Tersedia</div>
+            <div className="text-xs font-bold text-emerald-400">{formatCurrency(freeCash)}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ControlsToolbar (Filter, Search, Sort) */}
+      <section className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          {/* Search category input */}
+          <div className="relative min-w-[200px] flex-1 sm:flex-initial">
+            <input
+              type="text"
+              placeholder="Cari budget kategori..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl pl-8 pr-3 py-2 text-slate-700 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
+            />
+            <svg className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => setStatusFilter("ALL")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                statusFilter === "ALL"
+                  ? "bg-[#0a1612] text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Semua ({budgets.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter("SAFE")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+                statusFilter === "SAFE"
+                  ? "bg-emerald-600 text-white font-bold"
+                  : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              }`}
+            >
+              Aman ({safeCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter("NEAR")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+                statusFilter === "NEAR"
+                  ? "bg-amber-600 text-white font-bold"
+                  : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+              }`}
+            >
+              Mendekati Batas ({nearLimitCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter("OVER")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+                statusFilter === "OVER"
+                  ? "text-white font-bold"
+                  : "text-xs font-medium"
+              }`}
+              style={statusFilter === "OVER"
+                ? {background:'#FF0A54'}
+                : {background:'rgba(255,10,84,0.08)',color:'#FF0A54'}}
+            >
+              Melebihi ({overBudgetCount})
+            </button>
+          </div>
+        </div>
+
+        {/* Sorting selector */}
+        <div className="flex items-center gap-2 justify-end">
+          <label className="text-xs text-slate-500 font-medium whitespace-nowrap">Urutkan:</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+          >
+            <option value="PERCENT_DESC">Persentase Tertinggi</option>
+            <option value="AMOUNT_DESC">Nominal Terbesar</option>
+            <option value="REMAINING_ASC">Sisa Paling Sedikit</option>
+            <option value="NAME">Nama (A - Z)</option>
+          </select>
+        </div>
+      </section>
+
+      {/* Empty State or Grid */}
       {accounts.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+          <p className="text-xs text-slate-500">
             Belum ada akun keuangan. Buat akun terlebih dahulu untuk mengalokasikan budget.
           </p>
           <a
             href="/accounts"
-            className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
+            className="mt-3 inline-block rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
           >
             Kelola Akun
           </a>
         </div>
       ) : expenseCategories.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+          <p className="text-xs text-slate-500">
             Belum ada kategori Expense. Buat kategori terlebih dahulu.
           </p>
           <a
             href="/categories"
-            className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700"
+            className="mt-3 inline-block rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700"
           >
             Kelola Kategori
           </a>
         </div>
+      ) : filteredBudgets.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 px-6 py-12 text-center">
+          <p className="text-xs font-semibold text-slate-600">
+            Tidak ada budget yang sesuai filter.
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">
+            Klik tombol &quot;+ Buat Budget&quot; untuk menambahkan rencana pengeluaran.
+          </p>
+        </div>
       ) : (
-        <CreateBudgetForm categories={expenseCategories} accounts={accounts} onCreated={handleCreated} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredBudgets.map((b) => (
+            <BudgetCard key={b.id} budget={b} accounts={accounts} onDelete={handleDeleted} />
+          ))}
+        </div>
       )}
 
-      {/* Budget list */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          Budget Aktif ({budgets.length})
-        </h2>
-        {budgets.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Belum ada budget. Buat budget pertama Anda di atas.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {budgets.map((b) => (
-              <BudgetCard key={b.id} budget={b} accounts={accounts} onDelete={handleDeleted} />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Modal Buat Budget */}
+      {showModal && (
+        <CreateBudgetModal
+          categories={expenseCategories}
+          accounts={accounts}
+          onClose={() => setShowModal(false)}
+          onCreated={handleCreated}
+        />
+      )}
     </div>
   );
 }

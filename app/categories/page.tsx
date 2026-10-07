@@ -12,13 +12,16 @@ export default async function CategoriesPage() {
   }
 
   const { user } = sessionData;
-  const categoriesList = await CategoryService.getCategories(user.id);
+  const { categories, summary } = await CategoryService.getCategoriesWithStats(user.id);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-[#f6f8f9] flex flex-col md:flex-row">
       <AppHeader userEmail={user.email} />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <CategoriesClient initialCategories={categoriesList} />
+      <main className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-6 md:px-8 md:py-8 pb-28 md:pb-8">
+        <CategoriesClient
+          initialCategories={categories}
+          initialSummary={summary}
+        />
       </main>
     </div>
   );

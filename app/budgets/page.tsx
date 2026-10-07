@@ -35,17 +35,9 @@ export default async function BudgetsPage() {
   const accounts = JSON.parse(JSON.stringify(activeAccounts));
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+    <div className="min-h-screen bg-[#f6f8f9] flex flex-col md:flex-row">
       <AppHeader userEmail={user.email} />
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Manajemen Budget</h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              Buat dan pantau batas pengeluaran per kategori
-            </p>
-          </div>
-        </div>
+      <main className="flex-1 min-w-0 overflow-y-auto px-4 py-5 sm:px-6 md:px-8 md:py-8 pb-28 md:pb-8">
         <BudgetsClient
           initialBudgets={budgets}
           expenseCategories={expenseCategories}

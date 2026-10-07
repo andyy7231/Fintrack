@@ -146,12 +146,14 @@ export function ReportsClient({ initialReport }: Props) {
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2" data-purpose="page-header">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Laporan Keuangan</h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Periode:{" "}
-            <span className="font-medium text-zinc-700 dark:text-zinc-200">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Laporan Keuangan
+          </h1>
+          <p className="mt-1 text-xs text-slate-500">
+            Analisis arus kas & performa keuangan:{" "}
+            <span className="font-semibold text-slate-700">
               {period.startDate} — {period.endDate} (WIB)
             </span>
           </p>
@@ -163,37 +165,41 @@ export function ReportsClient({ initialReport }: Props) {
             id="export-csv-btn"
             onClick={() => handleExport("csv")}
             disabled={isExporting || isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
           >
-            <span>⬇</span>
-            CSV
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Ekspor CSV</span>
           </button>
           <button
             id="export-xlsx-btn"
             onClick={() => handleExport("xlsx")}
             disabled={isExporting || isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 shadow-xs transition-colors hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
           >
-            <span>⬇</span>
-            Excel
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Ekspor Excel</span>
           </button>
         </div>
       </div>
 
-      {/* ── Filter Bar ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+      {/* ── Filter Bar (Stitch Style) ── */}
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
         {/* Preset pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {PRESETS.map((p) => (
             <button
               key={p.value}
               id={`preset-${p.value}`}
               onClick={() => handlePresetChange(p.value)}
               disabled={isPending}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 ${
+              className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer ${
                 filter.preset === p.value
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  ? "bg-[#0a1612] text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {p.label}
@@ -203,9 +209,9 @@ export function ReportsClient({ initialReport }: Props) {
 
         {/* Custom date pickers */}
         {filter.preset === "custom" && (
-          <div className="mt-4 flex flex-wrap items-end gap-3">
+          <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-end gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-[11px] font-semibold text-slate-600">
                 Tanggal Mulai
               </label>
               <input
@@ -213,11 +219,11 @@ export function ReportsClient({ initialReport }: Props) {
                 type="date"
                 value={filter.startDate}
                 onChange={(e) => setFilter((f) => ({ ...f, startDate: e.target.value }))}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <label className="text-[11px] font-semibold text-slate-600">
                 Tanggal Akhir
               </label>
               <input
@@ -225,14 +231,14 @@ export function ReportsClient({ initialReport }: Props) {
                 type="date"
                 value={filter.endDate}
                 onChange={(e) => setFilter((f) => ({ ...f, endDate: e.target.value }))}
-                className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
             <button
               id="apply-custom-filter-btn"
               onClick={handleApplyCustom}
               disabled={isPending}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
             >
               Terapkan
             </button>
@@ -242,16 +248,16 @@ export function ReportsClient({ initialReport }: Props) {
 
       {/* ── Error ── */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-400">
+        <div className="rounded-xl px-4 py-3 text-xs" style={{background:'rgba(255,10,84,0.07)',border:'1px solid rgba(255,10,84,0.20)',color:'#c0003b'}}>
           {error}
         </div>
       )}
 
-      {/* ── Loading overlay hint ── */}
+      {/* ── Loading indicator ── */}
       {isPending && (
-        <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
           <svg
-            className="h-4 w-4 animate-spin"
+            className="h-3.5 w-3.5 animate-spin text-emerald-600"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -270,7 +276,7 @@ export function ReportsClient({ initialReport }: Props) {
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
             />
           </svg>
-          Memuat laporan...
+          Memuat data laporan keuangan...
         </div>
       )}
 
@@ -278,12 +284,12 @@ export function ReportsClient({ initialReport }: Props) {
       <ReportSummaryCards summary={report.summary} />
 
       {/* ── Time Series Chart ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
         <div className="mb-4">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 className="text-sm font-bold text-slate-900">
             Tren Pemasukan vs Pengeluaran
           </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-[11px] text-slate-400">
             {period.granularity === "daily" ? "Harian" : "Bulanan"} — {periodLabel}
           </p>
         </div>
@@ -305,9 +311,9 @@ export function ReportsClient({ initialReport }: Props) {
       </div>
 
       {/* ── Account Breakdown ── */}
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex items-center border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+        <div className="flex items-center border-b border-slate-100 px-5 py-4">
+          <h2 className="text-sm font-bold text-slate-900">
             Ringkasan per Akun
           </h2>
         </div>

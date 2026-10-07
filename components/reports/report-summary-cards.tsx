@@ -25,23 +25,26 @@ interface CardProps {
 }
 
 function SummaryCard({ label, value, sub, colorClass, prefix, id }: CardProps) {
+  const fullValue = `${prefix || ""}${value}`;
   return (
     <div
       id={id}
-      className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900"
+      className="rounded-2xl border border-emerald-900/40 bg-gradient-to-br from-[#0c2018] to-[#123125] text-white p-3.5 sm:p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between overflow-hidden"
     >
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-slate-300 truncate">
         {label}
-      </p>
-      <p
-        className={`mt-2 text-2xl font-bold ${colorClass || "text-zinc-900 dark:text-zinc-100"}`}
-      >
-        {prefix}
-        {value}
-      </p>
-      {sub && (
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{sub}</p>
-      )}
+      </span>
+      <div className="mt-2.5 sm:mt-3 min-w-0">
+        <p
+          title={fullValue}
+          className={`text-base min-[380px]:text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight whitespace-nowrap truncate ${colorClass || "text-white"}`}
+        >
+          {fullValue}
+        </p>
+        {sub && (
+          <p className="mt-1 text-[10px] sm:text-[11px] text-slate-400 truncate">{sub}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -49,30 +52,30 @@ function SummaryCard({ label, value, sub, colorClass, prefix, id }: CardProps) {
 export function ReportSummaryCards({ summary }: Props) {
   const netColor =
     summary.netCashFlow >= 0
-      ? "text-blue-600 dark:text-blue-400"
-      : "text-amber-600 dark:text-amber-400";
+      ? "text-emerald-400"
+      : "text-[#FF0A54]";
 
   const savingsColor =
     summary.savingsRate >= 20
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-emerald-400"
       : summary.savingsRate >= 0
-      ? "text-amber-600 dark:text-amber-400"
-      : "text-red-600 dark:text-red-400";
+      ? "text-amber-400"
+      : "text-[#FF0A54]";
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-6">
       <SummaryCard
         id="report-total-income"
         label="Total Pemasukan"
         value={formatIDR(summary.totalIncome)}
-        colorClass="text-emerald-600 dark:text-emerald-400"
+        colorClass="text-emerald-400"
         prefix="+"
       />
       <SummaryCard
         id="report-total-expense"
         label="Total Pengeluaran"
         value={formatIDR(summary.totalExpense)}
-        colorClass="text-red-600 dark:text-red-400"
+        colorClass="text-[#FF0A54]"
         prefix="-"
       />
       <SummaryCard
@@ -88,19 +91,19 @@ export function ReportSummaryCards({ summary }: Props) {
         label="Savings Rate"
         value={`${summary.savingsRate.toFixed(1)}%`}
         colorClass={savingsColor}
-        sub={summary.totalIncome === 0 ? "Tidak ada pemasukan" : "Dari total pemasukan"}
+        sub={summary.totalIncome === 0 ? "Tidak ada pemasukan" : "Dari pemasukan"}
       />
       <SummaryCard
         id="report-tx-count"
         label="Jml Transaksi"
         value={summary.transactionCount.toString()}
-        sub="Hanya transaksi CONFIRMED"
+        sub="Transaksi CONFIRMED"
       />
       <SummaryCard
         id="report-transfers"
         label="Total Transfer"
         value={formatIDR(summary.totalTransfers)}
-        sub={`${summary.transfersCount} transfer`}
+        sub={`${summary.transfersCount} kali transfer`}
       />
     </div>
   );

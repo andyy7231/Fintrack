@@ -94,7 +94,7 @@ export function IncomeExpenseChart({ data }: Props) {
           wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
         />
         <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-        <Bar dataKey="expense" fill="#f43f5e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+        <Bar dataKey="expense" fill="#FF0A54" radius={[4, 4, 0, 0]} maxBarSize={40} />
       </BarChart>
     </ResponsiveContainer>
   );

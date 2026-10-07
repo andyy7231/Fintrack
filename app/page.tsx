@@ -1,53 +1,98 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-4 text-center dark:bg-zinc-950 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 font-bold text-white text-2xl shadow-lg shadow-blue-500/20">
-          FT
-        </div>
-        <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-5xl">
-          FinTrack
-        </h1>
-        <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
-          Personal Finance Management Web + WhatsApp
-        </p>
-        <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-500">
-          Catat transaksi semudah mengirim pesan WhatsApp, kelola keuangan secara terstruktur di web.
-        </p>
-
-        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="w-full rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto"
-            >
-              Masuk ke Dashboard ({user.name})
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="w-full rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto"
-              >
-                Masuk / Login
-              </Link>
-              <Link
-                href="/register"
-                className="w-full rounded-xl border border-zinc-300 bg-white px-6 py-3 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 sm:w-auto"
-              >
-                Daftar Akun Baru
-              </Link>
-            </>
-          )}
+    <div className="flex min-h-screen bg-[#0a1612] text-slate-200">
+      {/* Left panel */}
+      <div className="hidden lg:flex w-1/2 flex-col justify-between p-12 bg-[#0a1612] border-r border-[#132820]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
+            <Image src="/fintrack-logo.png" alt="FinTrack" width={40} height={40} className="w-full h-full object-cover" priority />
+          </div>
+          <span className="text-xl font-extrabold tracking-tight text-white">FinTrack</span>
         </div>
 
-        <div className="mt-12 rounded-xl border border-zinc-200 bg-white p-4 text-xs text-zinc-500 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-          🔒 Autentikasi aman ditenagai oleh <strong>Better Auth</strong> &amp; <strong>PostgreSQL</strong>.
+        <div>
+          <h1 className="text-4xl font-extrabold text-white tracking-tight leading-tight">
+            Kelola keuangan Anda<br />
+            <span className="text-[#00c076]">lebih cerdas.</span>
+          </h1>
+          <p className="mt-4 text-slate-400 text-lg leading-relaxed">
+            Catat transaksi via WhatsApp, pantau budget, lacak tujuan keuangan — semua dalam satu dashboard yang elegan.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3">
+            {[
+              "💬 Catat transaksi via WhatsApp",
+              "📊 Dashboard keuangan real-time",
+              "🎯 Manajemen budget & goals",
+              "🔐 Aman & terenkripsi",
+            ].map((feat) => (
+              <div key={feat} className="flex items-center gap-2 text-sm text-slate-300">
+                <span>{feat}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-600">
+          © 2026 FinTrack · Personal Finance Manager
+        </p>
+      </div>
+
+      {/* Right panel */}
+      <div className="flex flex-1 flex-col items-center justify-center px-8 bg-[#f6f8f9] text-slate-900">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="flex lg:hidden items-center gap-3 mb-10 justify-center">
+            <div className="w-10 h-10 rounded-xl overflow-hidden bg-black border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
+              <Image src="/fintrack-logo.png" alt="FinTrack" width={40} height={40} className="w-full h-full object-cover" priority />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight text-[#0a1612]">FinTrack</span>
+          </div>
+
+          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            {user ? `Selamat kembali, ${user.name}! 👋` : "Selamat datang!"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-500">
+            {user
+              ? "Lanjutkan ke dashboard keuangan Anda."
+              : "Masuk atau buat akun baru untuk mulai."}
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3">
+            {user ? (
+              <Link
+                href="/dashboard"
+                className="w-full flex items-center justify-center rounded-xl bg-[#00c076] hover:bg-[#00ab68] px-6 py-3 text-sm font-bold text-[#0a1612] shadow-sm transition-all hover:shadow-md"
+              >
+                Masuk ke Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="w-full flex items-center justify-center rounded-xl bg-[#00c076] hover:bg-[#00ab68] px-6 py-3 text-sm font-bold text-[#0a1612] shadow-sm transition-all hover:shadow-md"
+                >
+                  Masuk / Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="w-full flex items-center justify-center rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-all"
+                >
+                  Daftar Akun Baru
+                </Link>
+              </>
+            )}
+          </div>
+
+          <p className="mt-8 text-center text-xs text-slate-400">
+            🔒 Aman ditenagai <strong>Better Auth</strong> &amp; <strong>PostgreSQL</strong>
+          </p>
         </div>
       </div>
     </div>

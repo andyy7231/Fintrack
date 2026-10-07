@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { CategoryBreakdownItem } from "@/services/report.service";
 
 interface Props {
@@ -17,22 +18,73 @@ function formatIDR(value: number): string {
   }).format(value);
 }
 
-// Generate a default color if category has no color
-function defaultColor(idx: number, scheme: "income" | "expense"): string {
-  const incomeColors = [
-    "#10b981", "#34d399", "#6ee7b7", "#059669", "#047857",
-    "#a7f3d0", "#064e3b", "#0d9488", "#2dd4bf", "#14b8a6",
-  ];
-  const expenseColors = [
-    "#f43f5e", "#fb7185", "#fda4af", "#e11d48", "#be123c",
-    "#f87171", "#ef4444", "#dc2626", "#fca5a5", "#fecaca",
-  ];
-  const palette = scheme === "income" ? incomeColors : expenseColors;
-  return palette[idx % palette.length];
-}
+const CANONICAL_CATEGORY_COLORS: Record<string, string> = {
+  "makanan & minuman": "#EF4444",
+  "transportasi": "#F97316",
+  "tempat tinggal": "#F59E0B",
+  "tagihan & utilitas": "#EAB308",
+  "tagihan": "#EAB308",
+  "belanja": "#EC4899",
+  "kesehatan": "#14B8A6",
+  "pendidikan": "#8B5CF6",
+  "hiburan": "#A855F7",
+  "lainnya": "#64748B",
+  "pengeluaran lain": "#9CA3AF",
+  "kos": "#F59E0B",
+  "gaji": "#10B981",
+  "bonus": "#059669",
+  "freelance": "#0D9488",
+  "bisnis": "#0284C7",
+  "investasi": "#7C3AED",
+  "hadiah": "#6366F1",
+  "pemasukan lain": "#6B7280",
+};
+
+const DIVERSE_PALETTE = [
+  "#EC4899", // Belanja (Pink/Magenta)
+  "#EF4444", // Makanan & Minuman (Coral Red)
+  "#EAB308", // Tagihan & Utilitas (Yellow/Gold)
+  "#F97316", // Transportasi (Orange)
+  "#14B8A6", // Kesehatan (Teal)
+  "#8B5CF6", // Pendidikan (Purple)
+  "#A855F7", // Hiburan (Violet)
+  "#06B6D4", // Cyan
+  "#10B981", // Emerald
+  "#3B82F6", // Blue
+  "#F43F5E", // Rose
+  "#84CC16", // Lime
+  "#6366F1", // Indigo
+  "#D946EF", // Fuchsia
+  "#64748B", // Slate
+];
 
 export function ReportCategoryBreakdown({ title, items, colorScheme }: Props) {
   const isEmpty = items.length === 0;
+
+  // Resolve distinct colors with deduplication
+  const coloredItems = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    const usedColors = new Set<string>();
+
+    return items.map((item, idx) => {
+      const normalized = (item.categoryName || "").toLowerCase().trim();
+      let color = item.categoryColor;
+
+      if (!color || color === "#94a3b8" || color.trim() === "") {
+        color = CANONICAL_CATEGORY_COLORS[normalized] || DIVERSE_PALETTE[idx % DIVERSE_PALETTE.length];
+      }
+
+      if (usedColors.has(color.toLowerCase())) {
+        const unused = DIVERSE_PALETTE.find((c) => !usedColors.has(c.toLowerCase()));
+        if (unused) {
+          color = unused;
+        }
+      }
+
+      usedColors.add(color.toLowerCase());
+      return { ...item, resolvedColor: color };
+    });
+  }, [items]);
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
@@ -46,8 +98,8 @@ export function ReportCategoryBreakdown({ title, items, colorScheme }: Props) {
         </div>
       ) : (
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {items.map((item, idx) => {
-            const color = item.categoryColor || defaultColor(idx, colorScheme);
+          {coloredItems.map((item, idx) => {
+            const color = item.resolvedColor;
             return (
               <div key={item.categoryId ?? idx} className="px-5 py-3.5">
                 <div className="flex items-center justify-between gap-3">

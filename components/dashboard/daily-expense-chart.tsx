@@ -32,7 +32,7 @@ function CustomTooltip({ active, payload, label }: any) {
       <p className="mb-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
         {label}
       </p>
-      <p className="text-sm font-medium text-rose-500">
+      <p className="text-sm font-medium" style={{color:'#FF0A54'}}>
         Pengeluaran: {formatIDR(payload[0].value)}
       </p>
     </div>
@@ -59,8 +59,8 @@ export function DailyExpenseChart({ data }: Props) {
       >
         <defs>
           <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.03} />
+            <stop offset="5%" stopColor="#FF0A54" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#FF0A54" stopOpacity={0.03} />
           </linearGradient>
         </defs>
         <CartesianGrid
@@ -88,15 +88,15 @@ export function DailyExpenseChart({ data }: Props) {
           tickLine={false}
           width={48}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(244,63,94,0.3)", strokeWidth: 1 }} />
+        <Tooltip content={<CustomTooltip />} cursor={{ stroke: "rgba(255,10,84,0.3)", strokeWidth: 1 }} />
         <Area
           type="monotone"
           dataKey="expense"
-          stroke="#f43f5e"
+          stroke="#FF0A54"
           strokeWidth={2}
           fill="url(#expenseGradient)"
           dot={false}
-          activeDot={{ r: 4, fill: "#f43f5e" }}
+          activeDot={{ r: 4, fill: "#FF0A54" }}
         />
       </AreaChart>
     </ResponsiveContainer>

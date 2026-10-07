@@ -71,8 +71,8 @@ export function ReportTimeSeriesChart({ data }: Props) {
             <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gradExpense" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+            <stop offset="5%" stopColor="#FF0A54" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#FF0A54" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="gradNet" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
@@ -122,7 +122,7 @@ export function ReportTimeSeriesChart({ data }: Props) {
         <Area
           type="monotone"
           dataKey="expense"
-          stroke="#f43f5e"
+          stroke="#FF0A54"
           strokeWidth={2}
           fill="url(#gradExpense)"
           dot={false}

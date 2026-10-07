@@ -182,30 +182,36 @@ function KpiCard({
     period.customEnd
   );
 
+  const fullFormattedValue = `${prefix || ""}${formatRp(value)}`;
+
   return (
-    <div className="group relative flex flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      {/* Label */}
-      <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-        {label}
-      </p>
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-emerald-900/40 bg-gradient-to-br from-[#0c2018] to-[#123125] text-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md overflow-hidden">
+      <div className="min-w-0">
+        {/* Label */}
+        <p className="text-xs font-semibold text-slate-200 truncate">
+          {label}
+        </p>
 
-      {/* Value */}
-      <p className={`mt-1 text-2xl font-bold tabular-nums ${colorClass || "text-zinc-900 dark:text-zinc-100"}`}>
-        {prefix}
-        {formatRp(value)}
-      </p>
+        {/* Value */}
+        <p
+          title={fullFormattedValue}
+          className={`mt-1 text-xl sm:text-2xl font-bold tabular-nums whitespace-nowrap truncate ${colorClass || "text-white"}`}
+        >
+          {fullFormattedValue}
+        </p>
 
-      {/* Period info */}
-      <div className="mt-1.5 space-y-0.5">
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">{line1}</p>
-        {line2 && (
-          <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-snug">{line2}</p>
-        )}
-        {count !== undefined && (
-          <p className="text-xs text-zinc-400 dark:text-zinc-500">
-            {count} transaksi
-          </p>
-        )}
+        {/* Period info */}
+        <div className="mt-1.5 space-y-0.5">
+          <p className="text-xs text-slate-400 leading-snug">{line1}</p>
+          {line2 && (
+            <p className="text-xs text-slate-400 leading-snug">{line2}</p>
+          )}
+          {count !== undefined && (
+            <p className="text-xs text-slate-400">
+              {count} transaksi
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Period override dropdown */}
@@ -231,11 +237,11 @@ function KpiCard({
 
 function KpiSkeleton() {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 animate-pulse">
-      <div className="h-3 w-28 rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="mt-3 h-7 w-36 rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="mt-2 h-3 w-44 rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="mt-1 h-3 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
+    <div className="rounded-2xl border border-emerald-900/40 bg-gradient-to-br from-[#0c2018] to-[#123125] p-5 shadow-sm animate-pulse min-h-[140px]">
+      <div className="h-3 w-28 rounded bg-emerald-800/40" />
+      <div className="mt-3 h-7 w-36 rounded bg-emerald-800/40" />
+      <div className="mt-2 h-3 w-44 rounded bg-emerald-900/40" />
+      <div className="mt-1 h-3 w-32 rounded bg-emerald-900/40" />
     </div>
   );
 }
@@ -366,13 +372,13 @@ export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
     ? (rateKpi.net / rateKpi.income) * 100
     : 0;
   const savingRateColor = savingRate >= 20
-    ? "text-emerald-600 dark:text-emerald-400"
+    ? "text-emerald-400"
     : savingRate >= 0
-    ? "text-amber-600 dark:text-amber-400"
-    : "text-red-600 dark:text-red-400";
+    ? "text-amber-400"
+    : "text-[#FF0A54]";
   const netSavingsColor = (netKpi?.net ?? 0) >= 0
-    ? "text-blue-600 dark:text-blue-400"
-    : "text-amber-600 dark:text-amber-400";
+    ? "text-emerald-400"
+    : "text-amber-400";
 
   const globalPeriodState: CardPeriodState = {
     preset: globalPreset,
@@ -389,8 +395,8 @@ export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
       {/* Global period selector header */}
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Periode KPI</p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Periode KPI</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             {gl1}{gl2 ? ` · ${gl2}` : ""}
           </p>
         </div>
@@ -422,7 +428,7 @@ export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
             label="Pemasukan"
             value={incomeKpi?.income ?? 0}
             prefix="+"
-            colorClass="text-emerald-600 dark:text-emerald-400"
+            colorClass="text-emerald-400"
             period={incomePeriod ?? globalPeriodState}
             count={incomeKpi?.transactionCount}
             firstDate={firstDate}
@@ -436,7 +442,7 @@ export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
             label="Pengeluaran"
             value={expenseKpi?.expense ?? 0}
             prefix="-"
-            colorClass="text-red-600 dark:text-red-400"
+            colorClass="text-[#FF0A54]"
             period={expensePeriod ?? globalPeriodState}
             count={expenseKpi?.transactionCount}
             firstDate={firstDate}
@@ -459,31 +465,36 @@ export function KpiSectionClient({ firstDate, initialAllKpis }: Props) {
 
         {/* Tingkat Tabungan */}
         {rateKpi?.loading ? <KpiSkeleton /> : (
-          <div className="group relative flex flex-col gap-1 rounded-2xl border border-zinc-200 bg-white p-5 shadow-xs transition-shadow hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-              Tingkat Tabungan
-            </p>
-            <p className={`mt-1 text-2xl font-bold tabular-nums ${savingRateColor}`}>
-              {savingRate.toFixed(1)}%
-            </p>
-            <div className="mt-1.5 space-y-0.5">
-              {(() => {
-                const { line1, line2 } = periodDisplayLabel(
-                  (ratePeriod ?? globalPeriodState).preset,
-                  firstDate,
-                  (ratePeriod ?? globalPeriodState).customStart,
-                  (ratePeriod ?? globalPeriodState).customEnd
-                );
-                return (
-                  <>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug">{line1}</p>
-                    {line2 && <p className="text-xs text-zinc-400 dark:text-zinc-500 leading-snug">{line2}</p>}
-                  </>
-                );
-              })()}
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                {rateKpi?.income === 0 ? "Tidak ada pemasukan" : "Dari pemasukan"}
+          <div className="group relative flex flex-col justify-between rounded-2xl border border-emerald-900/40 bg-gradient-to-br from-[#0c2018] to-[#123125] text-white p-4 sm:p-5 shadow-sm transition-shadow hover:shadow-md overflow-hidden">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-200 truncate">
+                Tingkat Tabungan
               </p>
+              <p
+                title={`${savingRate.toFixed(1)}%`}
+                className={`mt-2 text-xl sm:text-2xl font-bold tabular-nums whitespace-nowrap truncate ${savingRateColor}`}
+              >
+                {savingRate.toFixed(1)}%
+              </p>
+              <div className="mt-2 space-y-0.5">
+                {(() => {
+                  const { line1, line2 } = periodDisplayLabel(
+                    (ratePeriod ?? globalPeriodState).preset,
+                    firstDate,
+                    (ratePeriod ?? globalPeriodState).customStart,
+                    (ratePeriod ?? globalPeriodState).customEnd
+                  );
+                  return (
+                    <>
+                      <p className="text-xs text-slate-400 leading-snug">{line1}</p>
+                      {line2 && <p className="text-xs text-slate-400 leading-snug">{line2}</p>}
+                    </>
+                  );
+                })()}
+                <p className="text-xs text-slate-400">
+                  {rateKpi?.income === 0 ? "Tidak ada pemasukan" : "Dari pemasukan"}
+                </p>
+              </div>
             </div>
             <div className="mt-2">
               <PeriodDropdown

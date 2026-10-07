@@ -71,8 +71,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12 dark:bg-zinc-950 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8 rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <div className="text-center">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 text-white font-bold text-xl">
-            FT
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl overflow-hidden bg-black border border-emerald-500/30 shadow-md shadow-emerald-500/10">
+            <img src="/logo.png" alt="FinTrack Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Masuk ke FinTrack

@@ -109,7 +109,7 @@ export function GoalDetailClient({
   };
 
   const handleDeleteContribution = async (contribId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus kontribusi ini?")) return;
+    if (!confirm("Hapus catatan kontribusi ini?")) return;
 
     try {
       const res = await fetch(`/api/v1/goals/${goal.id}/contributions/${contribId}`, {
@@ -130,16 +130,6 @@ export function GoalDetailClient({
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!editName.trim()) {
-      setErrorMessage("Nama target tidak boleh kosong");
-      return;
-    }
-    const targetNum = parseFloat(editTarget);
-    if (isNaN(targetNum) || targetNum <= 0) {
-      setErrorMessage("Target nominal harus lebih dari 0");
-      return;
-    }
-
     startTransition(async () => {
       try {
         const res = await fetch(`/api/v1/goals/${goal.id}`, {
@@ -155,12 +145,12 @@ export function GoalDetailClient({
 
         const json = await res.json();
         if (!res.ok || !json.success) {
-          setErrorMessage(json.error?.message || "Gagal memperbarui target keuangan");
+          setErrorMessage(json.error?.message || "Gagal mengubah target");
           return;
         }
 
-        setGoal(json.data);
         setShowEditGoalModal(false);
+        setGoal(json.data);
       } catch (err: unknown) {
         setErrorMessage(err instanceof Error ? err.message : "Terjadi kesalahan jaringan");
       }
@@ -178,7 +168,7 @@ export function GoalDetailClient({
       if (res.ok && json.success) {
         setGoal(json.data);
       } else {
-        alert(json.error?.message || "Gagal mengubah status");
+        alert(json.error?.message || "Gagal mengubah status goal");
       }
     } catch {
       alert("Terjadi kesalahan jaringan");
@@ -186,7 +176,7 @@ export function GoalDetailClient({
   };
 
   const handleDeleteGoal = async () => {
-    if (!confirm("Hapus target keuangan ini?")) return;
+    if (!confirm(`Hapus permanen target "${goal.name}" beserta riwayat kontribusinya?`)) return;
 
     try {
       const res = await fetch(`/api/v1/goals/${goal.id}`, {
@@ -196,7 +186,7 @@ export function GoalDetailClient({
       if (res.ok && json.success) {
         router.push("/goals");
       } else {
-        alert(json.error?.message || "Gagal menghapus target keuangan");
+        alert(json.error?.message || "Gagal menghapus target");
       }
     } catch {
       alert("Terjadi kesalahan jaringan");
@@ -207,24 +197,26 @@ export function GoalDetailClient({
     day: "numeric",
     month: "long",
     year: "numeric",
-    timeZone: "Asia/Jakarta",
   });
 
   return (
-    <div>
-      {/* Top Navigation Back Link */}
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Top Navigation Back Link & Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-2">
         <Link
           href="/goals"
-          className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 transition"
         >
-          ← Kembali ke Semua Target
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M19 12H5m7 7l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Kembali ke Semua Target
         </Link>
         <div className="flex items-center gap-2">
           {goal.status === "ACTIVE" && (
             <button
               onClick={() => handleStatusChange("PAUSED")}
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
             >
               Jeda Target
             </button>
@@ -232,7 +224,7 @@ export function GoalDetailClient({
           {goal.status === "PAUSED" && (
             <button
               onClick={() => handleStatusChange("ACTIVE")}
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
             >
               Lanjutkan Target
             </button>
@@ -240,7 +232,7 @@ export function GoalDetailClient({
           {goal.status !== "ARCHIVED" && (
             <button
               onClick={() => handleStatusChange("ARCHIVED")}
-              className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
             >
               Arsipkan
             </button>
@@ -250,13 +242,14 @@ export function GoalDetailClient({
               setErrorMessage(null);
               setShowEditGoalModal(true);
             }}
-            className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 shadow-xs"
           >
             Ubah
           </button>
           <button
             onClick={handleDeleteGoal}
-            className="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400"
+            className="rounded-xl px-3 py-1.5 text-xs font-semibold transition"
+            style={{background:'rgba(255,10,84,0.08)',color:'#FF0A54',border:'1px solid rgba(255,10,84,0.20)'}}
           >
             Hapus
           </button>
@@ -264,35 +257,42 @@ export function GoalDetailClient({
       </div>
 
       {/* Main Goal Hero Card */}
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xs dark:border-zinc-800 dark:bg-zinc-900 mb-8">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                {goal.name}
-              </h1>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                  goal.status === "COMPLETED"
-                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400"
-                    : goal.status === "ACTIVE"
-                    ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-400"
-                    : goal.status === "PAUSED"
-                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400"
-                    : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-400"
-                }`}
-              >
-                {goal.status === "COMPLETED"
-                  ? "Selesai"
-                  : goal.status === "ACTIVE"
-                  ? "Aktif"
-                  : goal.status === "PAUSED"
-                  ? "Dijeda"
-                  : "Diarsipkan"}
-              </span>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl flex-shrink-0">
+                🎯
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                  {goal.name}
+                </h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${
+                      goal.status === "COMPLETED"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : goal.status === "ACTIVE"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : goal.status === "PAUSED"
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : "bg-slate-100 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {goal.status === "COMPLETED"
+                      ? "Selesai"
+                      : goal.status === "ACTIVE"
+                      ? "Aktif"
+                      : goal.status === "PAUSED"
+                      ? "Dijeda"
+                      : "Diarsipkan"}
+                  </span>
+                </div>
+              </div>
             </div>
             {goal.description && (
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400 max-w-xl">
+              <p className="mt-3 text-xs text-slate-500 max-w-xl">
                 {goal.description}
               </p>
             )}
@@ -304,29 +304,29 @@ export function GoalDetailClient({
               setShowAddContribModal(true);
             }}
             disabled={goal.status === "ARCHIVED"}
-            className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-emerald-500/20 hover:bg-emerald-700 disabled:opacity-50 transition cursor-pointer"
           >
-            + Tambah Kontribusi
+            + Tambah Kontribusi (Nabung)
           </button>
         </div>
 
         {/* Progress Bar & Amounts */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 border-y border-zinc-100 dark:border-zinc-800 py-6">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-6 border-y border-slate-100 py-6">
           <div>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Terkumpul</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Terkumpul</span>
+            <p className="mt-1 text-2xl font-bold text-slate-900">
               {formatCurrency(goal.contributedAmount)}
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Target Nominal</p>
-            <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Nominal</span>
+            <p className="mt-1 text-2xl font-bold text-slate-900">
               {formatCurrency(goal.targetAmount)}
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Sisa Kebutuhan</p>
-            <p className="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sisa Kebutuhan</span>
+            <p className="mt-1 text-2xl font-bold text-emerald-600">
               {goal.remainingAmount > 0
                 ? formatCurrency(goal.remainingAmount)
                 : "Target Tercapai 🎉"}
@@ -336,30 +336,24 @@ export function GoalDetailClient({
 
         {/* Visual Progress Bar */}
         <div className="mt-6">
-          <div className="flex items-center justify-between text-sm mb-2">
-            <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+          <div className="flex items-center justify-between text-xs mb-2">
+            <span className="font-semibold text-slate-700">
               Progres Pencapaian
             </span>
-            <span className="font-bold text-blue-600 dark:text-blue-400">
+            <span className="font-bold text-emerald-600">
               {goal.progressPercentage.toFixed(1)}%
             </span>
           </div>
-          <div className="h-3.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
             <div
-              className={`h-3.5 rounded-full transition-all duration-500 ${
-                goal.status === "COMPLETED"
-                  ? "bg-emerald-500"
-                  : goal.progressPercentage >= 50
-                  ? "bg-blue-600 dark:bg-blue-500"
-                  : "bg-indigo-500"
-              }`}
+              className="h-3 rounded-full transition-all duration-500 bg-emerald-500"
               style={{ width: `${goal.displayPercentage}%` }}
             />
           </div>
-          <div className="mt-3 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
             <span>Deadline: {targetDateStr}</span>
             {goal.isOverdue ? (
-              <span className="font-semibold text-red-600 dark:text-red-400">
+              <span className="font-semibold" style={{color:'#FF0A54'}}>
                 ⚠ Waktu telah melewati deadline
               </span>
             ) : (
@@ -370,24 +364,24 @@ export function GoalDetailClient({
       </div>
 
       {/* Contributions Section */}
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-xs dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
+      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-              Riwayat Alokasi & Kontribusi
+            <h2 className="text-sm font-bold text-slate-900">
+              Aktivitas Setoran Terakhir (Mutasi Goals)
             </h2>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Daftar kontribusi dana yang dialokasikan untuk target ini
+            <p className="text-xs text-slate-500">
+              Riwayat setoran tabungan rutin ke tujuan finansial ini
             </p>
           </div>
-          <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            {contributions.length} Catatan
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+            {contributions.length} Transaksi
           </span>
         </div>
 
         {contributions.length === 0 ? (
           <div className="py-12 text-center">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs text-slate-400">
               Belum ada kontribusi yang dicatat untuk target ini.
             </p>
             <button
@@ -395,53 +389,62 @@ export function GoalDetailClient({
                 setErrorMessage(null);
                 setShowAddContribModal(true);
               }}
-              className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+              className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition cursor-pointer"
             >
               + Catat Kontribusi Pertama
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {contributions.map((c) => {
-              const cDateStr = new Date(c.contributionDate).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "Asia/Jakarta",
-              });
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="py-3 px-5">Tanggal</th>
+                  <th className="py-3 px-5">Keterangan</th>
+                  <th className="py-3 px-5">Nominal Setoran</th>
+                  <th className="py-3 px-5 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {contributions.map((c) => {
+                  const cDateStr = new Date(c.contributionDate).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  });
 
-              return (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                        {formatCurrency(c.amount)}
-                      </p>
-                      {c.transactionId && (
-                        <span className="rounded-md bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">
-                          Terkait Transaksi
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      {cDateStr}
-                      {c.description ? ` • ${c.description}` : ""}
-                      {c.transactionDescription ? ` (Ref: ${c.transactionDescription})` : ""}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteContribution(c.id)}
-                    className="ml-4 rounded-lg px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              );
-            })}
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3.5 px-5 text-slate-500 whitespace-nowrap">
+                        {cDateStr}
+                      </td>
+                      <td className="py-3.5 px-5 font-semibold text-slate-800">
+                        {c.description || "Setoran Tabungan"}
+                        {c.transactionDescription && (
+                          <span className="block text-[11px] text-slate-400 font-normal">
+                            Ref: {c.transactionDescription}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-5 font-bold text-emerald-600 whitespace-nowrap">
+                        + {formatCurrency(c.amount)}
+                      </td>
+                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteContribution(c.id)}
+                          className="text-slate-400 hover:text-[#FF0A54] p-1 rounded-lg transition"
+                          title="Hapus Kontribusi"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -449,28 +452,28 @@ export function GoalDetailClient({
       {/* Modal Tambah Kontribusi */}
       {showAddContribModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900">
                 Tambah Kontribusi Target
               </h2>
               <button
                 onClick={() => setShowAddContribModal(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
             {errorMessage && (
-              <div className="mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/60 dark:text-red-300">
+              <div className="mt-3 rounded-xl p-3 text-xs" style={{background:'rgba(255,10,84,0.07)',border:'1px solid rgba(255,10,84,0.20)',color:'#c0003b'}}>
                 {errorMessage}
               </div>
             )}
 
-            <form onSubmit={handleAddContribution} className="space-y-4">
+            <form onSubmit={handleAddContribution} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nominal Kontribusi (Rp) *
                 </label>
                 <input
@@ -478,28 +481,28 @@ export function GoalDetailClient({
                   placeholder="Contoh: 1000000"
                   value={contribAmount}
                   onChange={(e) => setContribAmount(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   required
                 />
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Maksimal yang dapat ditambahkan: {formatCurrency(goal.remainingAmount)}
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Maksimal yang dibutuhkan: {formatCurrency(goal.remainingAmount)}
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Tanggal Kontribusi
                 </label>
                 <input
                   type="date"
                   value={contribDate}
                   onChange={(e) => setContribDate(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Keterangan (Opsional)
                 </label>
                 <input
@@ -507,12 +510,12 @@ export function GoalDetailClient({
                   placeholder="Contoh: Tabungan gaji bulan ini"
                   value={contribDesc}
                   onChange={(e) => setContribDesc(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Hubungkan dengan Transaksi (Opsional)
                 </label>
                 <select
@@ -527,7 +530,7 @@ export function GoalDetailClient({
                       }
                     }
                   }}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 >
                   <option value="">-- Tanpa Hubungan Transaksi --</option>
                   {userTransactions.map((tx) => (
@@ -536,23 +539,23 @@ export function GoalDetailClient({
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                  Hanya sebagai referensi alokasi, tidak mengubah saldo akun atau memotong uang dua kali.
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Hanya sebagai referensi alokasi, tidak mengurangi saldo riil ganda.
                 </p>
               </div>
 
-              <div className="mt-6 flex justify-end gap-3 pt-2">
+              <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddContribModal(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? "Menyimpan..." : "Simpan Kontribusi"}
                 </button>
@@ -565,89 +568,89 @@ export function GoalDetailClient({
       {/* Modal Ubah Goal */}
       {showEditGoalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900">
                 Ubah Target Keuangan
               </h2>
               <button
                 onClick={() => setShowEditGoalModal(false)}
-                className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
               >
                 ✕
               </button>
             </div>
 
             {errorMessage && (
-              <div className="mb-4 rounded-xl bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/60 dark:text-red-300">
+              <div className="mt-3 rounded-xl p-3 text-xs" style={{background:'rgba(255,10,84,0.07)',border:'1px solid rgba(255,10,84,0.20)',color:'#c0003b'}}>
                 {errorMessage}
               </div>
             )}
 
-            <form onSubmit={handleEditGoal} className="space-y-4">
+            <form onSubmit={handleEditGoal} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nama Target *
                 </label>
                 <input
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Deskripsi
                 </label>
                 <textarea
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
                   rows={2}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Target Nominal (Rp) *
                 </label>
                 <input
                   type="number"
                   value={editTarget}
                   onChange={(e) => setEditTarget(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Target Tanggal Deadline *
                 </label>
                 <input
                   type="date"
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-300 bg-white px-3.5 py-2 text-sm text-zinc-900 focus:border-blue-600 focus:outline-hidden dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                   required
                 />
               </div>
 
-              <div className="mt-6 flex justify-end gap-3 pt-2">
+              <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowEditGoalModal(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-sm shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>

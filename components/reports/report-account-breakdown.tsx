@@ -82,7 +82,7 @@ export function ReportAccountBreakdown({ accounts }: Props) {
               <td className="px-5 py-3.5 text-right font-medium text-emerald-600 dark:text-emerald-400">
                 +{formatIDR(acc.income)}
               </td>
-              <td className="px-5 py-3.5 text-right font-medium text-red-600 dark:text-red-400">
+              <td className="px-5 py-3.5 text-right font-medium" style={{color:'#FF0A54'}}>
                 -{formatIDR(acc.expense)}
               </td>
               <td

@@ -181,38 +181,54 @@ export default function PeriodFilter({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Period Dropdown */}
-      <div>
-        <label 
-          htmlFor="period-select" 
-          className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-        >
-          Periode
-        </label>
-        <select
-          id="period-select"
-          value={periodType}
-          onChange={(e) => handlePeriodTypeChange(e.target.value as PeriodType)}
-          className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-        >
-          {periodOptions.map((option) => (
-            <option key={option.value} value={option.value} className="bg-white dark:bg-zinc-800">
-              {option.label}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-3">
+      {/* Period Dropdown & Active Label in inline flex / compact container */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+        <div className="flex items-center gap-3 flex-1">
+          <label 
+            htmlFor="period-select" 
+            className="text-xs font-semibold text-slate-500 whitespace-nowrap flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Filter Periode:
+          </label>
+          <select
+            id="period-select"
+            value={periodType}
+            onChange={(e) => handlePeriodTypeChange(e.target.value as PeriodType)}
+            className="text-xs font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+          >
+            {periodOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Period Label Display */}
+        {periodLabel && (
+          <div className="text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-3 py-1.5 rounded-xl flex items-center gap-1.5 self-start sm:self-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>{periodLabel}</span>
+          </div>
+        )}
       </div>
 
       {/* Custom Date Pickers (shown only when CUSTOM selected) */}
       {periodType === "CUSTOM" && (
-        <div className="space-y-3">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Start Date Input */}
             <div>
               <label 
                 htmlFor="start-date" 
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                className="block text-xs font-semibold text-slate-600 mb-1.5"
               >
                 Tanggal Awal
               </label>
@@ -222,7 +238,7 @@ export default function PeriodFilter({
                 value={customStartDate}
                 onChange={(e) => handleStartDateChange(e.target.value)}
                 max={getTodayString()}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                className="w-full text-xs text-slate-800 bg-slate-50 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
 
@@ -230,7 +246,7 @@ export default function PeriodFilter({
             <div>
               <label 
                 htmlFor="end-date" 
-                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                className="block text-xs font-semibold text-slate-600 mb-1.5"
               >
                 Tanggal Akhir
               </label>
@@ -240,24 +256,17 @@ export default function PeriodFilter({
                 value={customEndDate}
                 onChange={(e) => handleEndDateChange(e.target.value)}
                 max={getTodayString()}
-                className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                className="w-full text-xs text-slate-800 bg-slate-50 px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
           </div>
 
           {/* Validation Error Message */}
           {validationError && (
-            <p className="text-sm text-red-600 dark:text-red-400 mt-2">
+            <p className="text-xs font-medium mt-1" style={{color:'#FF0A54'}}>
               {validationError}
             </p>
           )}
-        </div>
-      )}
-
-      {/* Period Label Display */}
-      {periodLabel && (
-        <div className="text-sm text-zinc-600 dark:text-zinc-400 px-4 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
-          {periodLabel}
         </div>
       )}
     </div>

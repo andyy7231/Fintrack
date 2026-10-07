@@ -1,10 +1,10 @@
-﻿import { AppHeader } from "@/components/navigation/app-header";
+import { AppHeader } from "@/components/navigation/app-header";
 
 export default function AccountsLoading() {
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-[#f6f8f9] flex">
       <AppHeader />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-1 min-w-0 overflow-y-auto px-6 py-8 md:px-8">
         {/* Header skeleton */}
         <div className="mb-6 flex items-center justify-between">
           <div>

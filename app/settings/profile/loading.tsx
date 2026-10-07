@@ -1,8 +1,8 @@
-﻿import { AppHeader } from "@/components/navigation/app-header";
+import { AppHeader } from "@/components/navigation/app-header";
 
 export default function ProfileLoading() {
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="min-h-screen bg-[#f6f8f9] flex">
       <AppHeader />
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Header skeleton */}

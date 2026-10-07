@@ -11,6 +11,13 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
+  const includeStats = searchParams.get("stats") === "true";
+
+  if (includeStats) {
+    const data = await CategoryService.getCategoriesWithStats(user.id);
+    return apiSuccess(data);
+  }
+
   const typeParam = searchParams.get("type");
   const type = typeParam === "INCOME" || typeParam === "EXPENSE" ? typeParam : undefined;
 

@@ -12,6 +12,8 @@ import { DailyExpenseChart } from "@/components/dashboard/daily-expense-chart";
 import { BudgetOverview } from "@/components/dashboard/budget-overview";
 import { GoalsOverview } from "@/components/dashboard/goals-overview";
 import { KpiSectionClient } from "@/components/dashboard/kpi-section-client";
+import { MarketPulseWidget } from "@/components/dashboard/market-pulse-widget";
+import { MarketService } from "@/services/market.service";
 import { perf } from "@/lib/utils/perf";
 
 // ─── Account type icon ────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ export default async function DashboardPage() {
     budgetList,
     goalSummary,
     initialAllKpis,
+    marketPulse,
   ] = await Promise.all([
     perf.measure("DashboardPage:getSummary", () =>
       DashboardService.getSummary(user.id, timezone)
@@ -90,6 +93,9 @@ export default async function DashboardPage() {
     ),
     perf.measure("DashboardPage:getKPIsForPeriod", () =>
       DashboardService.getKPIsForPeriod(user.id, firstTransactionDate, getJakartaTodayEnd())
+    ),
+    perf.measure("DashboardPage:getMarketPulse", () =>
+      MarketService.getMarketPulse().catch(() => null)
     ),
   ]);
 
@@ -244,6 +250,11 @@ export default async function DashboardPage() {
 
         {/* ── Period-aware KPI Cards ── */}
         <KpiSectionClient firstDate={firstDateStr} initialAllKpis={initialAllKpis} />
+
+        {/* ── Market Pulse: Pantauan Pasar Realtime (BTC, IHSG, Emas Antam) ── */}
+        <div className="mt-6">
+          <MarketPulseWidget initialData={marketPulse} />
+        </div>
 
         {/* ── Charts Row: Income vs Expense | Category Donut ── */}
         <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">

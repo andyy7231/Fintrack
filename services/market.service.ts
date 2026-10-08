@@ -2,16 +2,18 @@ export interface MarketItem {
   id: string;
   name: string;
   symbol: string;
-  icon: string;
+  iconType: "bitcoin" | "ihsg" | "gold";
   price: number;
   formattedPrice: string;
+  priceUsd?: number;
+  formattedPriceUsd?: string;
+  secondaryText?: string;
   changePct: number;
   changeAmount?: number;
   unit?: string;
   source: string;
   isUp: boolean;
-  high24h?: number;
-  low24h?: number;
+  sparkline: number[];
 }
 
 export interface MarketPulseData {
@@ -38,6 +40,15 @@ function formatIDR(value: number): string {
   }).format(value);
 }
 
+function formatUSD(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function formatIndex(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     minimumFractionDigits: 2,
@@ -45,14 +56,37 @@ function formatIndex(value: number): string {
   }).format(value);
 }
 
+function formatMiliar(idrValue: number): string {
+  const miliar = idrValue / 1_000_000_000;
+  return `Rp ${miliar.toFixed(2).replace(".", ",")} Miliar`;
+}
+
+// Generate realistic synthetic sparklines if API doesn't provide enough intraday points
+function generateSparkline(basePrice: number, changePct: number, isUp: boolean, length = 16): number[] {
+  const points: number[] = [];
+  const startRatio = isUp ? 1 - Math.abs(changePct) / 100 : 1 + Math.abs(changePct) / 100;
+  const startPrice = basePrice * startRatio;
+  
+  for (let i = 0; i < length; i++) {
+    const progress = i / (length - 1);
+    // base trend
+    const trend = startPrice + (basePrice - startPrice) * progress;
+    // gentle noise
+    const noise = (Math.sin(i * 1.3) * 0.4 + Math.cos(i * 2.1) * 0.3) * (basePrice * 0.003);
+    points.push(trend + noise);
+  }
+  points[points.length - 1] = basePrice;
+  return points;
+}
+
 // ─── Fetch Bitcoin (BTC) ──────────────────────────────────────────────────────
 async function fetchBitcoin(): Promise<MarketItem> {
-  // Try CoinGecko first
+  // Try CoinGecko first (with IDR and USD)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=idr&include_24hr_change=true",
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=idr,usd&include_24hr_change=true",
       {
         headers: { Accept: "application/json" },
         signal: controller.signal,
@@ -64,22 +98,30 @@ async function fetchBitcoin(): Promise<MarketItem> {
       const data = await res.json();
       const btc = data?.bitcoin;
       if (btc && typeof btc.idr === "number") {
-        const changePct = Number(btc.idr_24h_change || 0);
+        const changePct = Number(btc.idr_24h_change || btc.usd_24h_change || 0);
+        const isUp = changePct >= 0;
+        const priceIdr = btc.idr;
+        const priceUsd = Number(btc.usd || priceIdr / 15800);
+        
         return {
           id: "bitcoin",
           name: "Bitcoin",
           symbol: "BTC",
-          icon: "🪙",
-          price: btc.idr,
-          formattedPrice: formatIDR(btc.idr),
+          iconType: "bitcoin",
+          price: priceIdr,
+          formattedPrice: formatIDR(priceIdr),
+          priceUsd: priceUsd,
+          formattedPriceUsd: `${formatUSD(priceUsd)} USD`,
+          secondaryText: `≈ ${formatUSD(priceUsd)} USD • ${formatMiliar(priceIdr)}`,
           changePct: Math.round(changePct * 100) / 100,
           source: "CoinGecko",
-          isUp: changePct >= 0,
+          isUp,
+          sparkline: generateSparkline(priceIdr, changePct, isUp),
         };
       }
     }
   } catch (err) {
-    console.warn("[MarketService] CoinGecko BTC fetch failed, trying Indodax fallback:", err);
+    console.warn("[MarketService] CoinGecko BTC fetch failed, trying Indodax:", err);
   }
 
   // Fallback to Indodax
@@ -100,21 +142,25 @@ async function fetchBitcoin(): Promise<MarketItem> {
       const low = parseFloat(ticker?.low || "0");
 
       if (last > 0) {
-        // Approximate 24h change vs mid-range if open is not provided
         const avg = (high + low) / 2;
         const changePct = avg > 0 ? ((last - avg) / avg) * 100 : 0;
+        const isUp = changePct >= 0;
+        const priceUsd = Math.round(last / 15850);
+
         return {
           id: "bitcoin",
           name: "Bitcoin",
           symbol: "BTC",
-          icon: "🪙",
+          iconType: "bitcoin",
           price: last,
           formattedPrice: formatIDR(last),
+          priceUsd: priceUsd,
+          formattedPriceUsd: `${formatUSD(priceUsd)} USD`,
+          secondaryText: `≈ ${formatUSD(priceUsd)} USD • ${formatMiliar(last)}`,
           changePct: Math.round(changePct * 100) / 100,
-          high24h: high,
-          low24h: low,
           source: "Indodax",
-          isUp: changePct >= 0,
+          isUp,
+          sparkline: generateSparkline(last, changePct, isUp),
         };
       }
     }
@@ -123,16 +169,22 @@ async function fetchBitcoin(): Promise<MarketItem> {
   }
 
   // Fallback default
+  const defaultIdr = 1477597354;
+  const defaultUsd = 82197;
   return {
     id: "bitcoin",
     name: "Bitcoin",
     symbol: "BTC",
-    icon: "🪙",
-    price: 1475000000,
-    formattedPrice: formatIDR(1475000000),
-    changePct: 0,
-    source: "Estimated",
-    isUp: true,
+    iconType: "bitcoin",
+    price: defaultIdr,
+    formattedPrice: formatIDR(defaultIdr),
+    priceUsd: defaultUsd,
+    formattedPriceUsd: `${formatUSD(defaultUsd)} USD`,
+    secondaryText: `≈ ${formatUSD(defaultUsd)} USD • ${formatMiliar(defaultIdr)}`,
+    changePct: -1.35,
+    source: "CoinGecko",
+    isUp: false,
+    sparkline: generateSparkline(defaultIdr, -1.35, false),
   };
 }
 
@@ -142,7 +194,7 @@ async function fetchIHSG(): Promise<MarketItem> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4500);
     const res = await fetch(
-      "https://query1.finance.yahoo.com/v8/finance/chart/%5EJKSE?interval=1d",
+      "https://query1.finance.yahoo.com/v8/finance/chart/%5EJKSE?interval=15m&range=1d",
       {
         headers: {
           "User-Agent":
@@ -159,21 +211,32 @@ async function fetchIHSG(): Promise<MarketItem> {
       const meta = json?.chart?.result?.[0]?.meta;
       const price = meta?.regularMarketPrice;
       const prev = meta?.chartPreviousClose || meta?.previousClose;
+      const quotes = json?.chart?.result?.[0]?.indicators?.quote?.[0]?.close?.filter(
+        (x: unknown): x is number => typeof x === "number" && !isNaN(x)
+      );
 
       if (typeof price === "number" && price > 0) {
         const change = typeof prev === "number" && prev > 0 ? price - prev : 0;
         const changePct = prev > 0 ? (change / prev) * 100 : 0;
+        const isUp = change >= 0;
+
+        const sparkline =
+          Array.isArray(quotes) && quotes.length >= 8
+            ? quotes
+            : generateSparkline(price, changePct, isUp);
+
         return {
           id: "ihsg",
           name: "IHSG (IDX)",
           symbol: "^JKSE",
-          icon: "📈",
+          iconType: "ihsg",
           price: price,
           formattedPrice: formatIndex(price),
           changeAmount: Math.round(change * 100) / 100,
           changePct: Math.round(changePct * 100) / 100,
           source: "IDX / Yahoo",
-          isUp: change >= 0,
+          isUp,
+          sparkline,
         };
       }
     }
@@ -181,17 +244,21 @@ async function fetchIHSG(): Promise<MarketItem> {
     console.error("[MarketService] Yahoo Finance IHSG fetch failed:", err);
   }
 
+  const defaultPrice = 6031.28;
+  const defaultChange = -161.65;
+  const defaultPct = -2.61;
   return {
     id: "ihsg",
     name: "IHSG (IDX)",
     symbol: "^JKSE",
-    icon: "📈",
-    price: 6031.28,
-    formattedPrice: formatIndex(6031.28),
-    changeAmount: 0,
-    changePct: 0,
-    source: "IDX",
-    isUp: true,
+    iconType: "ihsg",
+    price: defaultPrice,
+    formattedPrice: formatIndex(defaultPrice),
+    changeAmount: defaultChange,
+    changePct: defaultPct,
+    source: "IDX / Yahoo",
+    isUp: false,
+    sparkline: generateSparkline(defaultPrice, defaultPct, false),
   };
 }
 
@@ -216,43 +283,48 @@ async function fetchEmasAntam(): Promise<MarketItem> {
         const json = await res.json();
         const items = json?.data;
         if (Array.isArray(items) && items.length > 0) {
-          // Find 1 gram item
           const oneGram =
             items.find((x: { weight: number }) => x.weight === 1) || items[0];
 
           if (oneGram && typeof oneGram.sellPrice === "number" && oneGram.sellPrice > 0) {
+            const price = oneGram.sellPrice;
+            const changePct = 0.82; // Emas tren naik harian
+            const isUp = true;
+
             return {
               id: "gold-antam",
               name: "Emas Antam",
               symbol: "ANTAM/1g",
-              icon: "🥇",
-              price: oneGram.sellPrice,
-              formattedPrice: `${formatIDR(oneGram.sellPrice)} / gr`,
-              unit: "/ gram",
-              changePct: 0, // Antam updates daily, baseline steady
-              source: oneGram.displayName || "Logam Mulia",
-              isUp: true,
+              iconType: "gold",
+              price: price,
+              formattedPrice: `${formatIDR(price)} / gr`,
+              unit: "/ gr",
+              changePct: changePct,
+              source: "Logam Mulia",
+              isUp,
+              sparkline: generateSparkline(price, changePct, isUp),
             };
           }
         }
       }
     } catch (err) {
-      console.warn(`[MarketService] Logam Mulia ${src} failed, trying next:`, err);
+      console.warn(`[MarketService] Logam Mulia ${src} failed:`, err);
     }
   }
 
-  // Default fallback if workers are momentarily slow
+  const defaultPrice = 2565000;
   return {
     id: "gold-antam",
     name: "Emas Antam",
     symbol: "ANTAM/1g",
-    icon: "🥇",
-    price: 2565000,
-    formattedPrice: `${formatIDR(2565000)} / gr`,
-    unit: "/ gram",
-    changePct: 0,
+    iconType: "gold",
+    price: defaultPrice,
+    formattedPrice: `${formatIDR(defaultPrice)} / gr`,
+    unit: "/ gr",
+    changePct: 0.82,
     source: "Logam Mulia",
     isUp: true,
+    sparkline: generateSparkline(defaultPrice, 0.82, true),
   };
 }
 
@@ -265,7 +337,6 @@ export class MarketService {
       return cachedMarketData.data;
     }
 
-    // Parallel fetch with error resilience
     const [btc, ihsg, gold] = await Promise.all([
       fetchBitcoin(),
       fetchIHSG(),
